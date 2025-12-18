@@ -1,0 +1,10 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Optional: nicer default background for the starter UI */
+html,
+body,
+#root {
+  height: 100%;
+}
