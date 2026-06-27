@@ -22,10 +22,6 @@ export function Countdown({ expiresAt }) {
   }, [expiresAt, now])
 
   return (
-    <span className={expired ? 'font-extrabold text-rose-700' : 'font-extrabold'}>
-      {text}
-    </span>
+    <span className={expired ? 'font-extrabold text-brand' : 'font-extrabold'}>{text}</span>
   )
 }
-
-

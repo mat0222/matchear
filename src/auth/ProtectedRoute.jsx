@@ -1,15 +1,17 @@
-import { Navigate, Outlet } from 'react-router-dom'
+import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from './AuthProvider.jsx'
+import { sanitizeReturnTo } from '../lib/security.js'
 
-export function ProtectedRoute({ allowRoles }) {
-  const { isAuthed, role } = useAuth()
+export function ProtectedRoute() {
+  const { isAuthed } = useAuth()
+  const location = useLocation()
 
   if (!isAuthed) {
-    const returnTo = `${window.location.pathname}${window.location.search}${window.location.hash}`
+    const returnTo = sanitizeReturnTo(
+      `${location.pathname}${location.search}${location.hash}`,
+    )
     return <Navigate to={`/login?returnTo=${encodeURIComponent(returnTo)}`} replace />
   }
-  if (allowRoles && !allowRoles.includes(role)) return <Navigate to="/" replace />
+
   return <Outlet />
 }
-
-

@@ -1,82 +1,51 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { Navbar } from '../components/Navbar.jsx'
-import { Footer } from '../components/Footer.jsx'
-import { useAuth } from '../auth/AuthProvider.jsx'
-import { buildHourlySlots } from '../lib/slots.js'
-import { Countdown } from '../components/Countdown.jsx'
+import { PageShell } from '../components/PageShell'
+import { PageHeader } from '../components/PageHeader'
+import { Countdown } from '../components/Countdown'
+import { useAuth } from '../auth/AuthProvider'
+import { buildHourlySlots } from '../lib/slots'
+import { addDays, formatARS, isoDay, prettyDay } from '../lib/time'
 
 const SLOTS = buildHourlySlots({ startHour: 9, endHour: 22 })
 
 const PAYMENT_METHODS = [
-  { id: 'cash', label: 'Efectivo' },
-  { id: 'card', label: 'Tarjeta' },
-  { id: 'transfer', label: 'Transferencia' },
+  { id: 'cash', label: 'Efectivo', desc: 'Pagás en el complejo' },
+  { id: 'card', label: 'Tarjeta', desc: 'Débito o crédito' },
+  { id: 'transfer', label: 'Transferencia', desc: 'CBU / alias del club' },
 ]
 
-function isoDay(d) {
-  return d.toISOString().slice(0, 10)
-}
-
-function addDays(d, n) {
-  const x = new Date(d)
-  x.setDate(x.getDate() + n)
-  return x
-}
-
-function prettyDay(iso) {
-  const d = new Date(`${iso}T00:00:00`)
-  return d.toLocaleDateString('es-AR', { weekday: 'short', day: '2-digit', month: 'short' })
-}
-
-function formatARS(value) {
-  try {
-    return new Intl.NumberFormat('es-AR', {
-      style: 'currency',
-      currency: 'ARS',
-      maximumFractionDigits: 0,
-    }).format(value)
-  } catch {
-    return `$${value}`
-  }
-}
-
-export function PitchDetail() {
+export default function PitchDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { getPitch, isAuthed, createBookingAndPayment, listAvailability, payDeposit, store } =
+  const { getPitch, isAuthed, createBookingAndPayment, listAvailability, payDeposit, settings } =
     useAuth()
 
   const pitch = getPitch(id)
   const [day, setDay] = useState(() => isoDay(new Date()))
   const [slot, setSlot] = useState(SLOTS[0])
-  const [payMode, setPayMode] = useState('deposit') // 'deposit' | 'full'
+  const [payMode, setPayMode] = useState('deposit')
   const [method, setMethod] = useState(PAYMENT_METHODS[0].id)
   const [status, setStatus] = useState(null)
-  const [pending, setPending] = useState(null) // { paymentId, expiresAt } | null
+  const [pending, setPending] = useState(null)
 
-  if (!pitch) {
-    return (
-      <div className="min-h-screen bg-slate-50">
-        <Navbar />
-        <main className="mx-auto max-w-3xl px-6 py-16">
-          <h1 className="text-2xl font-extrabold text-slate-900">
-            Cancha no encontrada
-          </h1>
-          <Link
-            to="/canchas"
-            className="mt-6 inline-flex rounded-full bg-rose-500 px-6 py-2 text-sm font-semibold text-white hover:bg-rose-400"
-          >
-            Volver
-          </Link>
-        </main>
-        <Footer />
-      </div>
-    )
-  }
+  const dayOptions = useMemo(
+    () => Array.from({ length: 7 }, (_, i) => isoDay(addDays(new Date(), i))),
+    [],
+  )
 
-  const onReserve = () => {
-    const returnTo = `/canchas/${pitch.id}?slot=${encodeURIComponent(slot)}&method=${encodeURIComponent(method)}`
+  const availability = pitch
+    ? listAvailability({ pitchId: pitch.id, date: day, slots: SLOTS })
+    : []
+  const selectedStatus = availability.find((a) => a.slot === slot)?.status
+  const canReserve = selectedStatus === 'free'
+  const depositAmount = settings.depositAmount ?? 5000
+  const holdMinutes = settings.depositHoldMinutes ?? 15
+  const total = payMode === 'deposit' ? depositAmount : pitch?.price || 0
+
+  function onReserve() {
+    if (!pitch) return
+    const returnTo = `/canchas/${pitch.id}`
     if (!isAuthed) {
       navigate(`/login?returnTo=${encodeURIComponent(returnTo)}`)
       return
@@ -84,6 +53,7 @@ export function PitchDetail() {
     const res = createBookingAndPayment({
       pitchId: pitch.id,
       slot,
+      date: day,
       paymentMethod: { method, mode: payMode },
     })
     if (!res.ok) {
@@ -98,265 +68,204 @@ export function PitchDetail() {
     setStatus('ok')
   }
 
-  const availability = listAvailability({ pitchId: pitch.id, date: day, slots: SLOTS })
-  const selectedStatus = availability.find((a) => a.slot === slot)?.status
-  const canReserve = selectedStatus === 'free'
-  const depositAmount = store.settings?.depositAmount ?? 5000
-  const holdMinutes = store.settings?.depositHoldMinutes ?? 15
-  const total = payMode === 'deposit' ? depositAmount : pitch.price
-  const photos = useMemo(() => {
-    const arr = Array.isArray(pitch.photos) ? pitch.photos.filter(Boolean) : []
-    return arr.length ? arr : ['/hero.jpg']
-  }, [pitch.photos])
-  const [lightbox, setLightbox] = useState(null) // index | null
-
-  return (
-    <div className="min-h-screen bg-slate-50">
-      <Navbar />
-
-      <main className="mx-auto max-w-6xl px-6 py-12">
-        <div className="mb-8">
+  if (!pitch) {
+    return (
+      <PageShell>
+        <div className="mx-auto max-w-3xl px-4 py-20 text-center sm:px-6">
+          <h1 className="text-2xl font-extrabold text-neutral-950">Cancha no encontrada</h1>
           <Link
             to="/canchas"
-            className="text-sm font-medium text-slate-600 hover:text-slate-900"
+            className="mt-6 inline-flex rounded-full bg-brand px-6 py-3 text-sm font-bold text-white"
           >
-            ← Volver a canchas
+            Volver a canchas
           </Link>
         </div>
+      </PageShell>
+    )
+  }
 
-        <div className="grid gap-10 lg:grid-cols-3">
-          <div className="lg:col-span-2">
-            <div className="overflow-hidden rounded-3xl bg-white shadow-xl shadow-black/10 ring-1 ring-black/5">
-              <div className="bg-gradient-to-r from-emerald-500 to-emerald-700 px-8 py-10 text-white">
-                <div className="text-sm font-semibold opacity-90">
-                  {pitch.size} • {pitch.players} jugadores
-                </div>
-                <h1 className="mt-2 text-3xl font-extrabold tracking-tight">
-                  {pitch.name}
-                </h1>
-                <p className="mt-3 max-w-2xl text-white/90">{pitch.description}</p>
+  return (
+    <PageShell>
+      <PageHeader
+        eyebrow="Reservá tu turno"
+        title={pitch.name}
+        description={`${pitch.size} · ${pitch.players} jugadores · ${pitch.description}`}
+      />
+
+      <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
+        <Link to="/canchas" className="text-sm font-semibold text-neutral-500 hover:text-brand">
+          ← Volver a canchas
+        </Link>
+
+        <div className="mt-8 grid gap-8 lg:grid-cols-3">
+          <div className="space-y-6 lg:col-span-2">
+            <div className="overflow-hidden rounded-3xl border border-neutral-100 bg-white shadow-card">
+              <div className="relative bg-gradient-to-br from-brand-dark via-brand to-brand px-6 py-8 text-white">
+                <div className="pointer-events-none absolute inset-0 bg-red-shine opacity-80" />
+                <p className="relative text-sm font-semibold text-white/90">Precio por hora</p>
+                <p className="relative mt-1 text-4xl font-black">{formatARS(pitch.price)}</p>
               </div>
 
-              <div className="px-8 py-8">
-                <div className="mb-8">
-                  <div className="text-sm font-extrabold text-slate-900">
-                    Fotos
-                  </div>
-                  <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                    {photos.slice(0, 6).map((src, idx) => (
-                      <button
-                        key={`${src}-${idx}`}
-                        type="button"
-                        onClick={() => setLightbox(idx)}
-                        className="group relative overflow-hidden rounded-2xl bg-slate-100 ring-1 ring-black/5"
-                      >
-                        <img
-                          src={src}
-                          alt={`Foto ${idx + 1} de ${pitch.name}`}
-                          className="h-36 w-full object-cover transition group-hover:scale-[1.02]"
-                          loading="lazy"
-                        />
-                        <div className="absolute inset-0 bg-black/0 transition group-hover:bg-black/10" />
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="grid gap-6 md:grid-cols-2">
-                  <div className="rounded-2xl bg-slate-50 p-6">
-                    <div className="text-xs font-extrabold uppercase tracking-wide text-slate-500">
-                      Precio por turno
-                    </div>
-                    <div className="mt-2 text-3xl font-extrabold text-slate-900">
-                      {formatARS(pitch.price)}
-                    </div>
-                    <div className="mt-1 text-xs font-semibold text-slate-500">
-                      Duración: 1 hora
-                    </div>
-                    <div className="mt-2 text-sm text-slate-600">
-                      Incluye iluminación LED y acceso a vestuarios (según disponibilidad).
-                    </div>
-                  </div>
-
-                  <div className="rounded-2xl bg-slate-50 p-6">
-                    <div className="text-xs font-extrabold uppercase tracking-wide text-slate-500">
-                      Disponibilidad (tiempo real)
-                    </div>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {[0, 1, 2, 3, 4, 5, 6].map((i) => {
-                        const d = isoDay(addDays(new Date(`${day}T00:00:00`), i))
-                        return (
-                          <button
-                            key={d}
-                            type="button"
-                            onClick={() => setDay(d)}
-                            className={
-                              d === day
-                                ? 'rounded-full bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white'
-                                : 'rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 ring-1 ring-black/5 hover:bg-slate-100'
-                            }
-                          >
-                            {prettyDay(d)}
-                          </button>
-                        )
-                      })}
-                    </div>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {availability.map((a) => (
-                        <button
-                          key={a.slot}
-                          type="button"
-                          onClick={() => setSlot(a.slot)}
-                          disabled={a.status !== 'free'}
-                          className={[
-                            'rounded-full px-3 py-1.5 text-xs font-semibold ring-1 ring-black/5',
-                            a.slot === slot && a.status === 'free'
-                              ? 'bg-emerald-600 text-white'
-                              : a.status === 'free'
-                                ? 'bg-white text-slate-700 hover:bg-slate-100'
-                                : a.status === 'occupied'
-                                  ? 'bg-slate-200 text-slate-500 line-through cursor-not-allowed'
-                                  : 'bg-amber-100 text-amber-700 cursor-not-allowed',
-                          ].join(' ')}
-                        >
-                          {a.slot}
-                        </button>
-                      ))}
-                    </div>
-                    <div className="mt-3 flex flex-wrap gap-3 text-xs font-semibold">
-                      <span className="inline-flex items-center gap-2 text-slate-600">
-                        <span className="h-2 w-2 rounded-full bg-emerald-600" /> libre
-                      </span>
-                      <span className="inline-flex items-center gap-2 text-slate-600">
-                        <span className="h-2 w-2 rounded-full bg-slate-400" /> ocupado
-                      </span>
-                      <span className="inline-flex items-center gap-2 text-slate-600">
-                        <span className="h-2 w-2 rounded-full bg-amber-500" /> bloqueado
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-8 rounded-2xl border border-black/5 bg-white p-6">
-                  <div className="text-sm font-extrabold text-slate-900">
-                    Pago (seña fija o total)
-                  </div>
-                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div className="p-6 sm:p-8">
+                <h2 className="text-lg font-extrabold text-neutral-950">Elegí el día</h2>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {dayOptions.map((d) => (
                     <button
+                      key={d}
                       type="button"
-                      onClick={() => setPayMode('deposit')}
-                      className={
-                        payMode === 'deposit'
-                          ? 'rounded-xl border border-rose-400 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700'
-                          : 'rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50'
-                      }
+                      onClick={() => setDay(d)}
+                      className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                        d === day
+                          ? 'bg-brand text-white shadow-md shadow-brand/25'
+                          : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
+                      }`}
                     >
-                      Seña ({formatARS(depositAmount)})
+                      {prettyDay(d)}
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => setPayMode('full')}
-                      className={
-                        payMode === 'full'
-                          ? 'rounded-xl border border-rose-400 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700'
-                          : 'rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50'
-                      }
-                    >
-                      Total ({formatARS(pitch.price)})
-                    </button>
-                  </div>
-
-                  <div className="mt-6 text-sm font-extrabold text-slate-900">
-                    Método
-                  </div>
-                  <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                    {PAYMENT_METHODS.map((m) => (
-                      <button
-                        key={m.id}
-                        type="button"
-                        onClick={() => setMethod(m.id)}
-                        className={
-                          m.id === method
-                            ? 'rounded-xl border border-rose-400 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700'
-                            : 'rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50'
-                        }
-                      >
-                        {m.label}
-                      </button>
-                    ))}
-                  </div>
+                  ))}
                 </div>
+
+                <h2 className="mt-8 text-lg font-extrabold text-neutral-950">Horarios disponibles</h2>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {availability.map((a) => (
+                    <button
+                      key={a.slot}
+                      type="button"
+                      onClick={() => setSlot(a.slot)}
+                      disabled={a.status !== 'free'}
+                      className={[
+                        'rounded-full px-4 py-2 text-sm font-semibold transition',
+                        a.slot === slot && a.status === 'free'
+                          ? 'bg-brand text-white'
+                          : a.status === 'free'
+                            ? 'bg-neutral-100 text-neutral-800 hover:bg-neutral-200'
+                            : a.status === 'occupied'
+                              ? 'cursor-not-allowed bg-neutral-200 text-neutral-400 line-through'
+                              : 'cursor-not-allowed bg-amber-100 text-amber-800',
+                      ].join(' ')}
+                    >
+                      {a.slot}
+                    </button>
+                  ))}
+                </div>
+                <div className="mt-4 flex flex-wrap gap-4 text-xs font-semibold text-neutral-500">
+                  <span className="inline-flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-brand" /> Libre
+                  </span>
+                  <span className="inline-flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-neutral-400" /> Ocupado
+                  </span>
+                  <span className="inline-flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-amber-500" /> Bloqueado
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-neutral-100 bg-white p-6 shadow-card sm:p-8">
+              <h2 className="text-lg font-extrabold text-neutral-950">Forma de pago</h2>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => setPayMode('deposit')}
+                  className={`rounded-2xl border p-4 text-left transition ${
+                    payMode === 'deposit'
+                      ? 'border-brand bg-brand-muted'
+                      : 'border-neutral-200 hover:border-neutral-300'
+                  }`}
+                >
+                  <p className="font-extrabold text-neutral-950">Seña</p>
+                  <p className="mt-1 text-sm text-neutral-600">{formatARS(depositAmount)} para reservar</p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPayMode('full')}
+                  className={`rounded-2xl border p-4 text-left transition ${
+                    payMode === 'full'
+                      ? 'border-brand bg-brand-muted'
+                      : 'border-neutral-200 hover:border-neutral-300'
+                  }`}
+                >
+                  <p className="font-extrabold text-neutral-950">Pago total</p>
+                  <p className="mt-1 text-sm text-neutral-600">{formatARS(pitch.price)} al confirmar</p>
+                </button>
+              </div>
+
+              <h3 className="mt-8 text-sm font-extrabold uppercase tracking-wide text-neutral-500">
+                Método
+              </h3>
+              <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                {PAYMENT_METHODS.map((m) => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => setMethod(m.id)}
+                    className={`rounded-2xl border p-4 text-left transition ${
+                      m.id === method
+                        ? 'border-brand bg-brand-muted'
+                        : 'border-neutral-200 hover:border-neutral-300'
+                    }`}
+                  >
+                    <p className="font-extrabold text-neutral-950">{m.label}</p>
+                    <p className="mt-1 text-xs text-neutral-600">{m.desc}</p>
+                  </button>
+                ))}
               </div>
             </div>
           </div>
 
-          <aside className="lg:col-span-1">
-            <div className="sticky top-6 rounded-3xl bg-white p-6 shadow-xl shadow-black/10 ring-1 ring-black/5">
-              <div className="text-sm font-extrabold text-slate-900">
-                Reserva tu turno
-              </div>
-
-              <div className="mt-4 space-y-3 text-sm text-slate-700">
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-500">Cancha</span>
-                  <span className="font-semibold">{pitch.size}</span>
+          <aside>
+            <div className="sticky top-24 rounded-3xl border border-neutral-100 bg-white p-6 shadow-card">
+              <h2 className="text-lg font-extrabold text-neutral-950">Resumen</h2>
+              <dl className="mt-4 space-y-3 text-sm">
+                <div className="flex justify-between gap-4">
+                  <dt className="text-neutral-500">Día</dt>
+                  <dd className="font-bold text-neutral-900">{prettyDay(day)}</dd>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-500">Horario</span>
-                  <span className="font-semibold">{slot}</span>
+                <div className="flex justify-between gap-4">
+                  <dt className="text-neutral-500">Horario</dt>
+                  <dd className="font-bold text-neutral-900">{slot} hs</dd>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-500">Pago</span>
-                  <span className="font-semibold">
+                <div className="flex justify-between gap-4">
+                  <dt className="text-neutral-500">Método</dt>
+                  <dd className="font-bold text-neutral-900">
                     {PAYMENT_METHODS.find((m) => m.id === method)?.label}
-                  </span>
+                  </dd>
                 </div>
-                <div className="flex items-center justify-between pt-2">
-                  <span className="text-slate-500">Total</span>
-                  <span className="text-lg font-extrabold text-slate-900">
-                    {formatARS(total)}
-                  </span>
+                <div className="flex justify-between gap-4 border-t border-neutral-100 pt-3">
+                  <dt className="font-semibold text-neutral-700">Total a pagar</dt>
+                  <dd className="text-xl font-black text-brand">{formatARS(total)}</dd>
                 </div>
-              </div>
+              </dl>
 
               <button
                 type="button"
                 onClick={onReserve}
                 disabled={!canReserve}
-                className="mt-6 w-full rounded-full bg-rose-500 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-rose-400 active:bg-rose-600"
+                className="mt-6 w-full rounded-xl bg-gradient-to-r from-brand to-brand-dark py-3.5 text-sm font-extrabold text-white shadow-lg shadow-brand/25 transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {payMode === 'deposit' ? 'Reservar (seña)' : 'Reservar'}
+                {payMode === 'deposit' ? 'Reservar con seña' : 'Reservar y pagar'}
               </button>
+
               {!canReserve ? (
-                <div className="mt-3 rounded-xl bg-amber-50 p-3 text-xs font-semibold text-amber-800">
+                <p className="mt-3 rounded-xl bg-amber-50 p-3 text-xs font-semibold text-amber-800">
                   Ese horario no está disponible. Elegí otro.
-                </div>
+                </p>
               ) : null}
 
               {!isAuthed ? (
-                <p className="mt-3 text-xs text-slate-500">
-                  Para reservar, necesitás{' '}
-                  <Link
-                    className="font-semibold text-rose-600 hover:underline"
-                    to={`/login?returnTo=${encodeURIComponent(`/canchas/${pitch.id}`)}`}
-                  >
+                <p className="mt-3 text-xs text-neutral-500">
+                  Necesitás{' '}
+                  <Link to={`/login?returnTo=${encodeURIComponent(`/canchas/${pitch.id}`)}`} className="font-bold text-brand hover:underline">
                     iniciar sesión
                   </Link>{' '}
-                  o{' '}
-                  <Link
-                    className="font-semibold text-rose-600 hover:underline"
-                    to={`/register?returnTo=${encodeURIComponent(`/canchas/${pitch.id}`)}`}
-                  >
-                    registrarte
-                  </Link>
-                  .
+                  para confirmar la reserva.
                 </p>
               ) : null}
 
               {status === 'pending' && pending ? (
-                <div className="mt-4 rounded-xl bg-amber-50 p-3 text-xs font-semibold text-amber-800">
-                  Turno reservado en espera. Pagá la seña antes de{' '}
-                  <Countdown expiresAt={pending.expiresAt} /> o se libera automáticamente.
+                <div className="mt-4 rounded-xl bg-brand-muted p-4 text-xs font-semibold text-neutral-800">
+                  Turno reservado. Pagá la seña antes de <Countdown expiresAt={pending.expiresAt} />.
                   <button
                     type="button"
                     onClick={() => {
@@ -364,79 +273,37 @@ export function PitchDetail() {
                       setStatus('ok')
                       setPending(null)
                     }}
-                    className="mt-3 w-full rounded-full bg-rose-500 px-4 py-2 text-xs font-extrabold text-white hover:bg-rose-400"
+                    className="mt-3 w-full rounded-xl bg-brand py-2.5 text-xs font-extrabold text-white hover:brightness-105"
                   >
-                    Pagar seña ahora (simulado)
+                    Pagar seña ahora
                   </button>
-                  <div className="mt-3 text-[11px] text-amber-900/70">
-                    Ventana de pago: {holdMinutes} min.
-                  </div>
+                  <p className="mt-2 text-[11px] text-neutral-600">Ventana de pago: {holdMinutes} min.</p>
                 </div>
               ) : null}
 
               {status === 'ok' ? (
-                <div className="mt-4 rounded-xl bg-emerald-50 p-3 text-xs font-semibold text-emerald-700">
-                  ¡Reserva confirmada! (simulado)
+                <div className="mt-4 space-y-3">
+                  <p className="rounded-xl bg-emerald-50 p-3 text-xs font-semibold text-emerald-700">
+                    ¡Reserva confirmada!
+                  </p>
+                  <Link
+                    to="/mis-reservas"
+                    className="block text-center text-sm font-bold text-brand hover:underline"
+                  >
+                    Ver mis reservas →
+                  </Link>
                 </div>
               ) : null}
+
               {status === 'err' ? (
-                <div className="mt-4 rounded-xl bg-rose-50 p-3 text-xs font-semibold text-rose-700">
+                <p className="mt-4 rounded-xl bg-red-50 p-3 text-xs font-semibold text-red-700">
                   No se pudo reservar. Intentá de nuevo.
-                </div>
+                </p>
               ) : null}
             </div>
           </aside>
         </div>
-      </main>
-
-      <Footer />
-
-      {lightbox !== null ? (
-        <div
-          className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-6"
-          role="dialog"
-          aria-modal="true"
-          onClick={() => setLightbox(null)}
-        >
-          <div
-            className="relative w-full max-w-4xl overflow-hidden rounded-2xl bg-black"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <img
-              src={photos[lightbox]}
-              alt={`Foto ${lightbox + 1} de ${pitch.name}`}
-              className="max-h-[80vh] w-full object-contain"
-            />
-            <button
-              type="button"
-              onClick={() => setLightbox(null)}
-              className="absolute right-3 top-3 rounded-full bg-white/10 px-3 py-2 text-xs font-extrabold text-white hover:bg-white/20"
-            >
-              Cerrar
-            </button>
-            {photos.length > 1 ? (
-              <>
-                <button
-                  type="button"
-                  onClick={() => setLightbox((i) => (i === 0 ? photos.length - 1 : i - 1))}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-white/10 px-3 py-2 text-xs font-extrabold text-white hover:bg-white/20"
-                >
-                  ‹
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setLightbox((i) => (i === photos.length - 1 ? 0 : i + 1))}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-white/10 px-3 py-2 text-xs font-extrabold text-white hover:bg-white/20"
-                >
-                  ›
-                </button>
-              </>
-            ) : null}
-          </div>
-        </div>
-      ) : null}
-    </div>
+      </section>
+    </PageShell>
   )
 }
-
-

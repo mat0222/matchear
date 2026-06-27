@@ -1,15 +1,29 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
-import { buildSeedStore } from '../lib/seed.js'
-import { loadStore, saveStore, uid, updateStore } from '../lib/storage.js'
+import { buildSeedStore, buildSeedUsers } from '../lib/seed.js'
+import {
+  hashPassword,
+  hashUserPasswordFields,
+  isSessionValid,
+  normalizeEmail,
+  sanitizeName,
+  sanitizePublicUser,
+  validateEmail,
+  validatePassword,
+  verifyPassword,
+} from '../lib/security.js'
+import { STORAGE_KEY, loadStore, saveStore, uid, updateStore } from '../lib/storage.js'
 
 const AuthContext = createContext(null)
+const ALLOWED_PAYMENT_METHODS = new Set(['cash', 'card', 'transfer'])
+const PITCH_PHOTO =
+  'https://images.unsplash.com/photo-1459865269847-f9fc3a4cb5fc?auto=format&fit=crop&w=800&q=80'
 
 function ensureStore() {
   const existing = loadStore()
   if (existing && existing.version === 1) {
-    // lightweight migrations inside v1
     let changed = false
     const next = { ...existing }
+
     if (!Array.isArray(next.blocks)) {
       next.blocks = []
       changed = true
@@ -17,32 +31,23 @@ function ensureStore() {
     if (!next.settings || typeof next.settings !== 'object') {
       next.settings = { slotMinutes: 60, depositAmount: 5000, depositHoldMinutes: 15 }
       changed = true
-    } else {
-      if (!next.settings.slotMinutes) {
-        next.settings.slotMinutes = 60
-        changed = true
-      }
-      if (typeof next.settings.depositAmount !== 'number') {
-        next.settings.depositAmount = 5000
-        changed = true
-      }
-      if (typeof next.settings.depositHoldMinutes !== 'number') {
-        next.settings.depositHoldMinutes = 15
-        changed = true
-      }
+    }
+    if (!isSessionValid(next.session)) {
+      next.session = null
+      changed = true
     }
     if (Array.isArray(next.pitches)) {
-      let pitchesChanged = false
-      const migrated = next.pitches.map((p) => {
-        const patch = {}
-        if (!p.sport) patch.sport = 'futbol'
-        if (!p.surface) patch.surface = 'sintetico'
-        if (!p.roof) patch.roof = 'descubierta'
-        if (!Array.isArray(p.photos) || p.photos.length === 0) patch.photos = ['/hero.jpg']
-        if (Object.keys(patch).length > 0) pitchesChanged = true
-        return Object.keys(patch).length > 0 ? { ...p, ...patch } : p
-      })
-      if (pitchesChanged) {
+      const migrated = next.pitches.map((p) => ({
+        ...p,
+        sport: p.sport || 'futbol',
+        surface: p.surface || 'sintetico',
+        roof: p.roof || 'descubierta',
+        photos:
+          Array.isArray(p.photos) && p.photos.length > 0 && !p.photos.includes('/hero.jpg')
+            ? p.photos
+            : [PITCH_PHOTO],
+      }))
+      if (JSON.stringify(migrated) !== JSON.stringify(next.pitches)) {
         next.pitches = migrated
         changed = true
       }
@@ -50,55 +55,119 @@ function ensureStore() {
     if (changed) saveStore(next)
     return next
   }
+
   const seeded = buildSeedStore()
+  seeded.users = buildSeedUsers()
   saveStore(seeded)
   return seeded
 }
 
+function findOrCreateGoogleUser(s, { email, name, sub }) {
+  const cleanEmail = normalizeEmail(email)
+  const existing =
+    s.users.find((u) => u.googleId === sub) ||
+    s.users.find((u) => u.email.toLowerCase() === cleanEmail)
+
+  if (existing) {
+    return {
+      ...existing,
+      googleId: sub,
+      provider: 'google',
+      name: sanitizeName(name || existing.name),
+    }
+  }
+
+  return {
+    id: uid('user'),
+    role: 'user',
+    email: cleanEmail,
+    name: sanitizeName(name) || 'Usuario Google',
+    googleId: sub,
+    provider: 'google',
+    createdAt: Date.now(),
+  }
+}
+
+function applyGoogleLogin(s, profile) {
+  const googleUser = findOrCreateGoogleUser(s, profile)
+  const users = s.users.some((u) => u.id === googleUser.id)
+    ? s.users.map((u) => (u.id === googleUser.id ? googleUser : u))
+    : [googleUser, ...s.users]
+  return {
+    store: {
+      ...s,
+      users,
+      session: { userId: googleUser.id, createdAt: Date.now() },
+    },
+    user: googleUser,
+  }
+}
+
+async function migrateStoredPasswords(storeData) {
+  let changed = false
+  const users = await Promise.all(
+    storeData.users.map(async (user) => {
+      if (!user.password || user.passwordHash) return user
+      changed = true
+      return hashUserPasswordFields(user)
+    }),
+  )
+  return changed ? { ...storeData, users } : storeData
+}
+
 export function AuthProvider({ children }) {
   const [store, setStore] = useState(() => ensureStore())
+  const [ready, setReady] = useState(false)
 
-  // Auto-cancel pending deposit holds
+  useEffect(() => {
+    let cancelled = false
+    const current = loadStore() ?? ensureStore()
+    migrateStoredPasswords(current).then((next) => {
+      if (cancelled) return
+      if (next !== current) saveStore(next)
+      setStore(next)
+      setReady(true)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   useEffect(() => {
     const interval = setInterval(() => {
       const now = Date.now()
       const next = updateStore((cur) => {
         const s = cur ?? ensureStore()
-        const payments = Array.isArray(s.payments) ? s.payments : []
-        const bookings = Array.isArray(s.bookings) ? s.bookings : []
-
         let changed = false
-        const expiredPaymentIds = new Set()
 
-        const nextPayments = payments.map((p) => {
-          if (p.status !== 'pending') return p
-          if (!p.expiresAt) return p
-          if (p.expiresAt > now) return p
-          expiredPaymentIds.add(p.id)
+        if (!isSessionValid(s.session)) {
+          changed = true
+          s.session = null
+        }
+
+        const nextPayments = s.payments.map((p) => {
+          if (p.status !== 'pending' || !p.expiresAt || p.expiresAt > now) return p
           changed = true
           return { ...p, status: 'expired' }
         })
 
-        const nextBookings = bookings.map((b) => {
-          if (b.status !== 'pending_payment') return b
-          if (!b.expiresAt) return b
-          if (b.expiresAt > now) return b
-          // expire booking when hold ends
+        const nextBookings = s.bookings.map((b) => {
+          if (b.status !== 'pending_payment' || !b.expiresAt || b.expiresAt > now) return b
           changed = true
           return { ...b, status: 'cancelled', cancelledAt: now }
         })
 
         if (!changed) return s
-        return { ...s, payments: nextPayments, bookings: nextBookings }
+        return { ...s, payments: nextPayments, bookings: nextBookings, session: s.session }
       })
-      setStore(next)
+      if (next) setStore(next)
     }, 10_000)
     return () => clearInterval(interval)
   }, [])
 
   useEffect(() => {
     const onStorage = (e) => {
-      if (e.key && e.key !== 'matchear:v1') return
+      if (e.key && e.key !== STORAGE_KEY) return
       const next = loadStore()
       if (next) setStore(next)
     }
@@ -106,47 +175,71 @@ export function AuthProvider({ children }) {
     return () => window.removeEventListener('storage', onStorage)
   }, [])
 
-  const session = store.session
-  const user = session
-    ? store.users.find((u) => u.id === session.userId) || null
+  const rawUser = store.session
+    ? store.users.find((u) => u.id === store.session.userId) || null
     : null
+  const user = sanitizePublicUser(rawUser)
 
   const api = useMemo(() => {
     return {
-      store,
+      ready,
       user,
       role: user?.role ?? null,
       isAuthed: Boolean(user),
-      login(email, password) {
+      settings: store.settings ?? { depositAmount: 5000, depositHoldMinutes: 15 },
+
+      async login(email, password) {
+        const cleanEmail = validateEmail(email)
+        const cleanPassword = validatePassword(password)
+        if (!cleanEmail || !cleanPassword) return { ok: false }
+
+        const s = loadStore() ?? ensureStore()
+        const found = s.users.find((u) => u.email === cleanEmail)
+        if (!found || found.provider === 'google') return { ok: false }
+
+        const valid = await verifyPassword(cleanPassword, found)
+        if (!valid) return { ok: false }
+
+        const userRecord =
+          found.password && !found.passwordHash ? await hashUserPasswordFields(found) : found
+
         const next = updateStore((cur) => {
-          const s = cur ?? ensureStore()
-          const found = s.users.find(
-            (u) => u.email.toLowerCase() === email.toLowerCase().trim(),
-          )
-          if (!found || found.password !== password) return s
+          const st = cur ?? ensureStore()
+          const users = st.users.map((u) => (u.id === userRecord.id ? userRecord : u))
           return {
-            ...s,
-            session: { userId: found.id, createdAt: Date.now() },
+            ...st,
+            users,
+            session: { userId: userRecord.id, createdAt: Date.now() },
           }
         })
         setStore(next)
-        const nextUser =
-          next.session && next.users.find((u) => u.id === next.session.userId)
-        return { ok: Boolean(nextUser), user: nextUser || null }
+        const nextUser = next?.session
+          ? sanitizePublicUser(next.users.find((u) => u.id === next.session.userId))
+          : null
+        return { ok: Boolean(nextUser), user: nextUser }
       },
-      register({ name, email, password }) {
-        const cleanEmail = email.toLowerCase().trim()
+
+      async register({ name, email, password }) {
+        const cleanEmail = validateEmail(email)
+        const cleanPassword = validatePassword(password)
+        const cleanName = sanitizeName(name)
+        if (!cleanEmail || !cleanPassword || !cleanName) return { ok: false }
+
+        const passwordHash = await hashPassword(cleanPassword)
+        let created = false
+
         const next = updateStore((cur) => {
           const s = cur ?? ensureStore()
-          const exists = s.users.some((u) => u.email.toLowerCase() === cleanEmail)
-          if (exists) return s
+          if (s.users.some((u) => u.email === cleanEmail)) return s
           const userId = uid('user')
+          created = true
           const newUser = {
             id: userId,
             role: 'user',
             email: cleanEmail,
-            password,
-            name: name?.trim() || 'Usuario',
+            passwordHash,
+            name: cleanName,
+            provider: 'email',
             createdAt: Date.now(),
           }
           return {
@@ -156,60 +249,64 @@ export function AuthProvider({ children }) {
           }
         })
         setStore(next)
-        const nextUser =
-          next.session && next.users.find((u) => u.id === next.session.userId)
-        return { ok: Boolean(nextUser), user: nextUser || null }
+        const nextUser = created && next?.session
+          ? sanitizePublicUser(next.users.find((u) => u.id === next.session.userId))
+          : null
+        return { ok: created && Boolean(nextUser), user: nextUser }
       },
+
+      loginWithGoogle({ email, name, sub }) {
+        if (!email || !sub) return { ok: false }
+        let matchedUser = null
+        const next = updateStore((cur) => {
+          const s = cur ?? ensureStore()
+          const result = applyGoogleLogin(s, { email, name, sub })
+          matchedUser = result.user
+          return result.store
+        })
+        setStore(next)
+        return { ok: Boolean(matchedUser), user: sanitizePublicUser(matchedUser) }
+      },
+
+      loginWithGoogleDemo() {
+        let matchedUser = null
+        const next = updateStore((cur) => {
+          const s = cur ?? ensureStore()
+          const result = applyGoogleLogin(s, {
+            email: 'demo@gmail.com',
+            name: 'Usuario Google',
+            sub: 'google_demo_matchear',
+          })
+          matchedUser = result.user
+          return result.store
+        })
+        setStore(next)
+        return { ok: Boolean(matchedUser), user: sanitizePublicUser(matchedUser) }
+      },
+
       logout() {
         const next = updateStore((cur) => ({ ...(cur ?? ensureStore()), session: null }))
         setStore(next)
       },
-      // Domain APIs
+
       listPitches() {
         return store.pitches
       },
+
       getPitch(id) {
+        if (!id || typeof id !== 'string') return null
         return store.pitches.find((p) => p.id === id) || null
       },
-      upsertPitch(pitch) {
-        const next = updateStore((cur) => {
-          const s = cur ?? ensureStore()
-          const normalized = {
-            sport: pitch.sport || 'futbol',
-            surface: pitch.surface || 'sintetico',
-            roof: pitch.roof || 'descubierta',
-            photos:
-              Array.isArray(pitch.photos) && pitch.photos.length > 0
-                ? pitch.photos
-                : ['/hero.jpg'],
-            ...pitch,
-          }
-          const idx = s.pitches.findIndex((p) => p.id === pitch.id)
-          const nextPitches =
-            idx === -1
-              ? [normalized, ...s.pitches]
-              : s.pitches.map((p) => (p.id === pitch.id ? { ...p, ...normalized } : p))
-          return { ...s, pitches: nextPitches }
-        })
-        setStore(next)
-      },
-      deletePitch(id) {
-        const next = updateStore((cur) => {
-          const s = cur ?? ensureStore()
-          return { ...s, pitches: s.pitches.filter((p) => p.id !== id) }
-        })
-        setStore(next)
-      },
+
       listAvailability({ pitchId, date, slots }) {
-        const day = date // 'YYYY-MM-DD'
         const taken = new Set(
           store.bookings
-            .filter((b) => b.pitchId === pitchId && b.date === day && b.status !== 'cancelled')
+            .filter((b) => b.pitchId === pitchId && b.date === date && b.status !== 'cancelled')
             .map((b) => b.slot),
         )
         const blocked = new Set(
           (store.blocks || [])
-            .filter((bl) => bl.pitchId === pitchId && bl.date === day)
+            .filter((bl) => bl.pitchId === pitchId && bl.date === date)
             .map((bl) => bl.slot),
         )
         return slots.map((s) => ({
@@ -217,106 +314,88 @@ export function AuthProvider({ children }) {
           status: blocked.has(s) ? 'blocked' : taken.has(s) ? 'occupied' : 'free',
         }))
       },
-      listBlocks({ pitchId, date }) {
-        const day = date
-        return (store.blocks || []).filter(
-          (b) => b.pitchId === pitchId && (day ? b.date === day : true),
-        )
-      },
-      toggleBlock({ pitchId, date, slot, reason }) {
-        const now = Date.now()
-        const next = updateStore((cur) => {
-          const s = cur ?? ensureStore()
-          const blocks = s.blocks || []
-          const existing = blocks.find(
-            (b) => b.pitchId === pitchId && b.date === date && b.slot === slot,
-          )
-          if (existing) {
-            return { ...s, blocks: blocks.filter((b) => b.id !== existing.id) }
-          }
-          const block = {
-            id: uid('block'),
-            pitchId,
-            date,
-            slot,
-            reason: reason || 'mantenimiento',
-            createdAt: now,
-          }
-          return { ...s, blocks: [block, ...blocks] }
-        })
-        setStore(next)
-      },
-      createBookingAndPayment({ pitchId, slot, paymentMethod }) {
+
+      createBookingAndPayment({ pitchId, slot, date, paymentMethod }) {
         if (!user) return { ok: false, error: 'NO_AUTH' }
         const pitch = store.pitches.find((p) => p.id === pitchId)
         if (!pitch) return { ok: false, error: 'NO_PITCH' }
 
-        const now = Date.now()
-        const bookingId = `book_${now}_${Math.random().toString(16).slice(2)}`
-        const paymentId = `pay_${now}_${Math.random().toString(16).slice(2)}`
-        const mode = paymentMethod?.mode || 'full' // 'full' | 'deposit'
         const method = paymentMethod?.method || paymentMethod
+        const mode = paymentMethod?.mode === 'full' ? 'full' : 'deposit'
+        if (!ALLOWED_PAYMENT_METHODS.has(method)) return { ok: false, error: 'INVALID_METHOD' }
+
+        const day = date || new Date().toISOString().slice(0, 10)
+        const now = Date.now()
+        const bookingId = uid('book')
+        const paymentId = uid('pay')
         const depositAmount = store.settings?.depositAmount ?? 5000
         const holdMinutes = store.settings?.depositHoldMinutes ?? 15
         const expiresAt = now + holdMinutes * 60 * 1000
         const amount = mode === 'deposit' ? depositAmount : pitch.price
 
+        let success = false
         const next = updateStore((cur) => {
           const s = cur ?? ensureStore()
-          const date = new Date().toISOString().slice(0, 10)
           const isTaken = s.bookings.some(
             (b) =>
               b.pitchId === pitchId &&
-              b.date === date &&
+              b.date === day &&
               b.slot === slot &&
               b.status !== 'cancelled',
           )
           const isBlocked = (s.blocks || []).some(
-            (bl) => bl.pitchId === pitchId && bl.date === date && bl.slot === slot,
+            (bl) => bl.pitchId === pitchId && bl.date === day && bl.slot === slot,
           )
           if (isTaken || isBlocked) return s
-          const booking = {
-            id: bookingId,
-            pitchId,
-            userId: user.id,
-            date,
-            slot,
-            status: mode === 'deposit' ? 'pending_payment' : 'confirmed',
-            paymentMode: mode,
-            expiresAt: mode === 'deposit' ? expiresAt : null,
-            createdAt: now,
-          }
-          const payment = {
-            id: paymentId,
-            bookingId,
-            pitchId,
-            userId: user.id,
-            method,
-            mode,
-            amount,
-            status: mode === 'deposit' ? 'pending' : 'paid',
-            expiresAt: mode === 'deposit' ? expiresAt : null,
-            createdAt: now,
-          }
+
+          success = true
           return {
             ...s,
-            bookings: [booking, ...s.bookings],
-            payments: [payment, ...s.payments],
+            bookings: [
+              {
+                id: bookingId,
+                pitchId,
+                userId: user.id,
+                date: day,
+                slot,
+                status: mode === 'deposit' ? 'pending_payment' : 'confirmed',
+                paymentMode: mode,
+                expiresAt: mode === 'deposit' ? expiresAt : null,
+                createdAt: now,
+              },
+              ...s.bookings,
+            ],
+            payments: [
+              {
+                id: paymentId,
+                bookingId,
+                pitchId,
+                userId: user.id,
+                method,
+                mode,
+                amount,
+                status: mode === 'deposit' ? 'pending' : 'paid',
+                expiresAt: mode === 'deposit' ? expiresAt : null,
+                createdAt: now,
+              },
+              ...s.payments,
+            ],
           }
         })
         setStore(next)
-        return next === store
-          ? { ok: false, error: 'NOT_AVAILABLE' }
-          : { ok: true, bookingId, paymentId, expiresAt }
+        if (!success) return { ok: false, error: 'NOT_AVAILABLE' }
+        return { ok: true, bookingId, paymentId, expiresAt }
       },
+
       payDeposit({ paymentId }) {
+        if (!user) return { ok: false }
         const now = Date.now()
+        let success = false
         const next = updateStore((cur) => {
           const s = cur ?? ensureStore()
           const payment = s.payments.find((p) => p.id === paymentId)
-          if (!payment || payment.status !== 'pending') return s
+          if (!payment || payment.userId !== user.id || payment.status !== 'pending') return s
           if (payment.expiresAt && payment.expiresAt <= now) {
-            // payment already expired
             return {
               ...s,
               payments: s.payments.map((p) =>
@@ -324,19 +403,21 @@ export function AuthProvider({ children }) {
               ),
             }
           }
-          const nextPayments = s.payments.map((p) =>
-            p.id === paymentId ? { ...p, status: 'paid', paidAt: now } : p,
-          )
-          const nextBookings = s.bookings.map((b) =>
-            b.id === payment.bookingId
-              ? { ...b, status: 'reserved', paidAt: now }
-              : b,
-          )
-          return { ...s, payments: nextPayments, bookings: nextBookings }
+          success = true
+          return {
+            ...s,
+            payments: s.payments.map((p) =>
+              p.id === paymentId ? { ...p, status: 'paid', paidAt: now } : p,
+            ),
+            bookings: s.bookings.map((b) =>
+              b.id === payment.bookingId ? { ...b, status: 'reserved', paidAt: now } : b,
+            ),
+          }
         })
         setStore(next)
-        return { ok: true }
+        return { ok: success }
       },
+
       myBookings() {
         if (!user) return []
         const paymentsByBooking = store.payments.reduce((acc, p) => {
@@ -352,19 +433,16 @@ export function AuthProvider({ children }) {
             payments: paymentsByBooking[b.id] || [],
           }))
       },
-      stats() {
-        const payments = store.payments
-        const totalRevenue = payments.reduce((sum, p) => sum + (p.amount || 0), 0)
-        const byMethod = payments.reduce((acc, p) => {
-          acc[p.method] = (acc[p.method] || 0) + 1
-          return acc
-        }, {})
-        const bookingsCount = store.bookings.length
-        const pitchesCount = store.pitches.length
-        return { totalRevenue, byMethod, bookingsCount, pitchesCount }
-      },
     }
-  }, [store, user])
+  }, [store, user, ready])
+
+  if (!ready) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-white">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand border-t-transparent" />
+      </div>
+    )
+  }
 
   return <AuthContext.Provider value={api}>{children}</AuthContext.Provider>
 }
@@ -374,5 +452,3 @@ export function useAuth() {
   if (!ctx) throw new Error('useAuth must be used inside AuthProvider')
   return ctx
 }
-
-

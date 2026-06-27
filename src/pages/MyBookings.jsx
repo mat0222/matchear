@@ -1,20 +1,9 @@
 import { Link } from 'react-router-dom'
-import { Navbar } from '../components/Navbar.jsx'
-import { Footer } from '../components/Footer.jsx'
-import { Countdown } from '../components/Countdown.jsx'
-import { useAuth } from '../auth/AuthProvider.jsx'
-
-function formatARS(value) {
-  try {
-    return new Intl.NumberFormat('es-AR', {
-      style: 'currency',
-      currency: 'ARS',
-      maximumFractionDigits: 0,
-    }).format(value)
-  } catch {
-    return `$${value}`
-  }
-}
+import { PageShell } from '../components/PageShell'
+import { PageHeader } from '../components/PageHeader'
+import { Countdown } from '../components/Countdown'
+import { useAuth } from '../auth/AuthProvider'
+import { formatARS } from '../lib/time'
 
 function statusLabel(b) {
   if (b.status === 'pending_payment') return 'Pendiente de pago'
@@ -24,134 +13,102 @@ function statusLabel(b) {
   return b.status
 }
 
-export function MyBookings() {
+export default function MyBookings() {
   const { myBookings, payDeposit } = useAuth()
   const bookings = myBookings()
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <Navbar ctaLabel="Canchas" ctaTo="/canchas" />
+    <PageShell>
+      <PageHeader
+        eyebrow="Tu cuenta"
+        title="Mis reservas"
+        description="Acá ves tus turnos confirmados y los pagos de seña pendientes."
+      />
 
-      <main className="mx-auto max-w-6xl px-6 py-14">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h1 className="text-4xl font-extrabold tracking-tight text-slate-900">
-              Mis reservas
-            </h1>
-            <p className="mt-2 text-sm text-slate-600">
-              Tus reservas y pagos (simulado).
-            </p>
+      <section className="mx-auto max-w-4xl px-4 py-10 sm:px-6 lg:px-8">
+        {bookings.length === 0 ? (
+          <div className="rounded-3xl border border-neutral-100 bg-white p-12 text-center shadow-card">
+            <p className="text-neutral-600">Todavía no tenés reservas.</p>
+            <Link
+              to="/canchas"
+              className="mt-6 inline-flex rounded-full bg-brand px-6 py-3 text-sm font-bold text-white"
+            >
+              Reservar una cancha
+            </Link>
           </div>
-          <Link
-            to="/canchas"
-            className="rounded-full bg-rose-500 px-5 py-2 text-sm font-semibold text-white hover:bg-rose-400"
-          >
-            Reservar otra cancha
-          </Link>
-        </div>
+        ) : (
+          <div className="space-y-4">
+            {bookings.map((b) => {
+              const depositPayment = b.payments.find(
+                (p) => p.mode === 'deposit' && (p.status === 'pending' || p.status === 'expired'),
+              )
+              const canPay =
+                depositPayment?.status === 'pending' &&
+                (!depositPayment.expiresAt || depositPayment.expiresAt > Date.now())
 
-        <div className="mt-10 grid gap-6">
-          {bookings.length === 0 ? (
-            <div className="rounded-2xl bg-white p-10 text-center text-sm text-slate-600 shadow-sm ring-1 ring-black/5">
-              No tenés reservas todavía.
-            </div>
-          ) : null}
-
-          {bookings.map((b) => {
-            const depositPayment = b.payments.find(
-              (p) => p.mode === 'deposit' && (p.status === 'pending' || p.status === 'expired'),
-            )
-            const canPay =
-              depositPayment && depositPayment.status === 'pending' && depositPayment.expiresAt
-                ? depositPayment.expiresAt > Date.now()
-                : Boolean(depositPayment && depositPayment.status === 'pending')
-
-            return (
-              <div
-                key={b.id}
-                className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-black/5"
-              >
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <div className="text-sm font-extrabold text-slate-900">
-                      {b.pitch?.name || 'Cancha'}
+              return (
+                <article
+                  key={b.id}
+                  className="rounded-3xl border border-neutral-100 bg-white p-6 shadow-card"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <h2 className="text-lg font-extrabold text-neutral-950">
+                        {b.pitch?.name || 'Cancha'}
+                      </h2>
+                      <p className="mt-1 text-sm text-neutral-600">
+                        {b.date} · {b.slot} hs · {b.pitch?.size}
+                      </p>
                     </div>
-                    <div className="mt-1 text-xs text-slate-500">
-                      {b.date} • {b.slot} • {b.pitch?.size}
+                    <span className="rounded-full bg-neutral-100 px-3 py-1 text-xs font-extrabold text-neutral-800">
+                      {statusLabel(b)}
+                    </span>
+                  </div>
+
+                  <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                    <div className="rounded-2xl bg-neutral-50 p-4">
+                      <p className="text-xs font-bold uppercase text-neutral-500">Precio cancha</p>
+                      <p className="mt-1 font-extrabold text-neutral-950">
+                        {formatARS(b.pitch?.price || 0)}
+                      </p>
+                    </div>
+                    <div className="rounded-2xl bg-neutral-50 p-4">
+                      <p className="text-xs font-bold uppercase text-neutral-500">Seña</p>
+                      {depositPayment ? (
+                        <p className="mt-1 text-sm font-semibold text-neutral-800">
+                          {depositPayment.status === 'pending' ? (
+                            <>
+                              Pendiente · <Countdown expiresAt={depositPayment.expiresAt} />
+                            </>
+                          ) : (
+                            'Vencida'
+                          )}
+                        </p>
+                      ) : (
+                        <p className="mt-1 text-sm text-neutral-600">—</p>
+                      )}
+                    </div>
+                    <div className="rounded-2xl bg-neutral-50 p-4">
+                      <p className="text-xs font-bold uppercase text-neutral-500">Acción</p>
+                      {depositPayment && canPay ? (
+                        <button
+                          type="button"
+                          onClick={() => payDeposit({ paymentId: depositPayment.id })}
+                          className="mt-2 w-full rounded-xl bg-brand py-2 text-xs font-extrabold text-white hover:brightness-105"
+                        >
+                          Pagar seña
+                        </button>
+                      ) : (
+                        <p className="mt-2 text-sm text-neutral-600">—</p>
+                      )}
                     </div>
                   </div>
-                  <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-extrabold text-slate-800">
-                    {statusLabel(b)}
-                  </div>
-                </div>
-
-                <div className="mt-4 grid gap-4 md:grid-cols-3">
-                  <div className="rounded-xl bg-slate-50 p-4">
-                    <div className="text-xs font-extrabold uppercase tracking-wide text-slate-500">
-                      Precio
-                    </div>
-                    <div className="mt-1 text-sm font-extrabold text-slate-900">
-                      {formatARS(b.pitch?.price || 0)}
-                    </div>
-                  </div>
-                  <div className="rounded-xl bg-slate-50 p-4">
-                    <div className="text-xs font-extrabold uppercase tracking-wide text-slate-500">
-                      Seña / Vencimiento
-                    </div>
-                    {depositPayment ? (
-                      <div className="mt-1 text-sm font-semibold text-slate-800">
-                        {depositPayment.status === 'pending' ? (
-                          <>
-                            Pendiente • <Countdown expiresAt={depositPayment.expiresAt} />
-                          </>
-                        ) : (
-                          <>Vencida</>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="mt-1 text-sm text-slate-600">—</div>
-                    )}
-                  </div>
-                  <div className="rounded-xl bg-slate-50 p-4">
-                    <div className="text-xs font-extrabold uppercase tracking-wide text-slate-500">
-                      Acciones
-                    </div>
-                    {depositPayment ? (
-                      <button
-                        type="button"
-                        disabled={!canPay}
-                        onClick={() => payDeposit({ paymentId: depositPayment.id })}
-                        className={
-                          canPay
-                            ? 'mt-2 w-full rounded-full bg-rose-500 px-4 py-2 text-xs font-extrabold text-white hover:bg-rose-400'
-                            : 'mt-2 w-full rounded-full bg-slate-200 px-4 py-2 text-xs font-extrabold text-slate-500 cursor-not-allowed'
-                        }
-                      >
-                        Pagar seña (simulado)
-                      </button>
-                    ) : (
-                      <div className="mt-1 text-sm text-slate-600">—</div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="mt-4 flex flex-wrap gap-3">
-                  <Link
-                    to={`/canchas/${b.pitchId}`}
-                    className="rounded-full bg-slate-100 px-4 py-2 text-xs font-extrabold text-slate-800 hover:bg-slate-200"
-                  >
-                    Ver cancha
-                  </Link>
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      </main>
-
-      <Footer />
-    </div>
+                </article>
+              )
+            })}
+          </div>
+        )}
+      </section>
+    </PageShell>
   )
 }
-
-

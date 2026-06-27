@@ -2,9 +2,19 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Optional: nicer default background for the starter UI */
-html,
-body,
-#root {
-  height: 100%;
+@layer base {
+  html {
+    @apply scroll-smooth;
+  }
+  body {
+    @apply m-0 min-h-screen bg-white text-neutral-900 antialiased;
+    background-image: theme(backgroundImage.dots-light);
+    background-size: theme(backgroundSize.dots);
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
 }
