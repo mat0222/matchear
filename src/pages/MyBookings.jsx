@@ -1,9 +1,11 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { PageShell } from '../components/PageShell'
 import { PageHeader } from '../components/PageHeader'
 import { Countdown } from '../components/Countdown'
 import { useAuth } from '../auth/AuthProvider'
 import { formatARS } from '../lib/time'
+import { openWhatsappToOwner } from '../lib/whatsapp'
 
 function statusLabel(b) {
   if (b.status === 'pending_payment') return 'Pendiente de pago'
@@ -14,8 +16,37 @@ function statusLabel(b) {
 }
 
 export default function MyBookings() {
-  const { myBookings, payDeposit } = useAuth()
+  const { myBookings, payDeposit, cancelBooking } = useAuth()
+  const [notice, setNotice] = useState(null)
   const bookings = myBookings()
+
+  async function handleCancel(booking) {
+    const confirmed = window.confirm(
+      `¿Querés cancelar ${booking.pitch?.name || 'la cancha'} del ${booking.date} a las ${booking.slot} hs?`,
+    )
+    if (!confirmed) return
+
+    const result = await cancelBooking({ bookingId: booking.id })
+    if (!result.ok) {
+      setNotice({ type: 'error', text: 'No se pudo cancelar el turno.' })
+      return
+    }
+
+    const whatsappUrl = openWhatsappToOwner({
+      pitchName: booking.pitch?.name || 'la cancha',
+      date: booking.date,
+      slot: booking.slot,
+      paymentMethod: booking.paymentMethod,
+      customerWhatsapp: booking.whatsapp,
+      status: 'cancelled',
+    })
+
+    setNotice({
+      type: 'success',
+      text: 'Turno cancelado. El horario volvió a quedar disponible. Se abrió WhatsApp para avisar al complejo.',
+      whatsappUrl,
+    })
+  }
 
   return (
     <PageShell>
@@ -26,6 +57,27 @@ export default function MyBookings() {
       />
 
       <section className="mx-auto max-w-4xl px-4 py-10 sm:px-6 lg:px-8">
+        {notice ? (
+          <div
+            className={`mb-6 rounded-2xl px-5 py-4 text-sm font-semibold ${
+              notice.type === 'success'
+                ? 'bg-emerald-50 text-emerald-800'
+                : 'bg-red-50 text-red-700'
+            }`}
+          >
+            <p>{notice.text}</p>
+            {notice.whatsappUrl ? (
+              <a
+                href={notice.whatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-2 inline-flex font-extrabold underline"
+              >
+                Abrir aviso de cancelación en WhatsApp de nuevo
+              </a>
+            ) : null}
+          </div>
+        ) : null}
         {bookings.length === 0 ? (
           <div className="rounded-3xl border border-neutral-100 bg-white p-12 text-center shadow-card">
             <p className="text-neutral-600">Todavía no tenés reservas.</p>
@@ -45,6 +97,7 @@ export default function MyBookings() {
               const canPay =
                 depositPayment?.status === 'pending' &&
                 (!depositPayment.expiresAt || depositPayment.expiresAt > Date.now())
+              const canCancel = b.status !== 'cancelled'
 
               return (
                 <article
@@ -65,7 +118,7 @@ export default function MyBookings() {
                     </span>
                   </div>
 
-                  <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                     <div className="rounded-2xl bg-neutral-50 p-4">
                       <p className="text-xs font-bold uppercase text-neutral-500">Precio cancha</p>
                       <p className="mt-1 font-extrabold text-neutral-950">
@@ -89,6 +142,12 @@ export default function MyBookings() {
                       )}
                     </div>
                     <div className="rounded-2xl bg-neutral-50 p-4">
+                      <p className="text-xs font-bold uppercase text-neutral-500">WhatsApp</p>
+                      <p className="mt-1 text-sm font-semibold text-neutral-800">
+                        {b.whatsapp ? `+${b.whatsapp}` : 'No informado'}
+                      </p>
+                    </div>
+                    <div className="rounded-2xl bg-neutral-50 p-4">
                       <p className="text-xs font-bold uppercase text-neutral-500">Acción</p>
                       {depositPayment && canPay ? (
                         <button
@@ -103,6 +162,21 @@ export default function MyBookings() {
                       )}
                     </div>
                   </div>
+
+                  {canCancel ? (
+                    <div className="mt-5 border-t border-neutral-100 pt-5">
+                      <button
+                        type="button"
+                        onClick={() => handleCancel(b)}
+                        className="rounded-xl border border-red-200 px-4 py-2.5 text-sm font-bold text-red-700 transition hover:bg-red-50"
+                      >
+                        Cancelar turno
+                      </button>
+                      <p className="mt-2 text-xs text-neutral-500">
+                        Si el pago ya fue registrado, quedará pendiente la gestión del reintegro.
+                      </p>
+                    </div>
+                  ) : null}
                 </article>
               )
             })}

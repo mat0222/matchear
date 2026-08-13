@@ -8,7 +8,6 @@ export default defineConfig({
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom', 'react-router-dom'],
-          google: ['@react-oauth/google'],
         },
       },
     },

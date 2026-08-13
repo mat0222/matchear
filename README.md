@@ -11,7 +11,7 @@ Plataforma web para un complejo de fútbol en **Villa del Rosario, Córdoba**. P
 Matchear nace como sitio institucional + flujo de reservas para un complejo deportivo. El objetivo es que un jugador pueda:
 
 1. Conocer el complejo y sus servicios.
-2. Registrarse o iniciar sesión (email o Google).
+2. Registrarse o iniciar sesión con email y contraseña.
 3. Elegir una cancha (5v5, 7v7, 8v8, 9v9), día, horario y forma de pago.
 4. Confirmar la reserva y verla en **Mis reservas**.
 
@@ -25,10 +25,10 @@ Además incluye landings para **torneos**, **turnos fijos**, **instalaciones**, 
 |--------|-------------|
 | **Inicio** | Landing con propuesta de valor y CTA a registro/canchas |
 | **Canchas** | Catálogo de formatos con precios y enlace a reserva |
-| **Reserva** | Selector de 7 días, horarios 09:00–21:00, disponibilidad en tiempo real |
+| **Reserva** | Día, horario, pago; al confirmar abre WhatsApp al dueño con el mensaje listo (`wa.me`) |
 | **Pagos** | Seña fija o pago total · Efectivo, tarjeta o transferencia |
-| **Auth** | Registro/login por email · Google OAuth (o modo demo sin Client ID) |
-| **Mis reservas** | Historial del usuario y pago de señas pendientes |
+| **Auth** | Registro/login por email y contraseña |
+| **Mis reservas** | Historial, pago de señas y **cancelación de turnos** |
 | **Torneos** | Cómo organizar un campeonato + formato de ejemplo |
 | **El complejo** | Instalaciones, turnos fijos, escuelita y contacto |
 
@@ -42,7 +42,7 @@ Además incluye landings para **torneos**, **turnos fijos**, **instalaciones**, 
 | **Build** | Vite 7 |
 | **Routing** | React Router 7 |
 | **Estilos** | Tailwind CSS 3 |
-| **Auth Google** | [@react-oauth/google](https://www.npmjs.com/package/@react-oauth/google) |
+| **Auth** | Firebase Authentication (email/contraseña) |
 | **Persistencia** | `localStorage` (prototipo) |
 | **Lint** | ESLint 9 |
 
@@ -67,9 +67,8 @@ cd Proyecto-matchear
 # Instalar dependencias
 npm install
 
-# Variables de entorno (opcional, para Google real)
+# Variables de entorno (ver FIREBASE.md)
 cp .env.example .env
-# Editar .env y agregar VITE_GOOGLE_CLIENT_ID si lo tenés
 
 # Servidor de desarrollo
 npm run dev
@@ -79,7 +78,7 @@ Abrí [http://localhost:5173](http://localhost:5173) en el navegador.
 
 ---
 
-## Scripts disponibles
+## Scripts
 
 | Comando | Descripción |
 |---------|-------------|
@@ -92,17 +91,29 @@ Abrí [http://localhost:5173](http://localhost:5173) en el navegador.
 
 ## Variables de entorno
 
-Creá un archivo `.env` en la raíz del proyecto:
+Creá un archivo `.env` en la raíz (no se sube a Git):
 
 ```env
-VITE_GOOGLE_CLIENT_ID=tu-client-id.apps.googleusercontent.com
+VITE_WHATSAPP_OWNER=5493511234567
+VITE_FIREBASE_API_KEY=
+VITE_FIREBASE_AUTH_DOMAIN=
+VITE_FIREBASE_PROJECT_ID=
+VITE_FIREBASE_STORAGE_BUCKET=
+VITE_FIREBASE_MESSAGING_SENDER_ID=
+VITE_FIREBASE_APP_ID=
+VITE_ADMIN_EMAIL=tu-email-admin@ejemplo.com
 ```
 
 | Variable | Obligatoria | Descripción |
 |----------|-------------|-------------|
-| `VITE_GOOGLE_CLIENT_ID` | No | Client ID de Google Cloud Console. Sin ella, el botón de Google funciona en **modo demo** local. |
+| `VITE_WHATSAPP_OWNER` | Recomendada | Número del complejo para avisos wa.me |
+| `VITE_FIREBASE_*` | Para producción | Config de la app web en Firebase |
+| `VITE_ADMIN_EMAIL` | Recomendada | Email admin (debe coincidir con `firestore.rules`) |
 
-Configuración de Google OAuth: [Google Cloud Console → Credentials](https://console.cloud.google.com/apis/credentials). Agregá `http://localhost:5173` como origen autorizado en desarrollo.
+Detalle del setup: **[FIREBASE.md](./FIREBASE.md)**
+
+> Nunca subas el archivo `.env` real. Solo `.env.example` con valores vacíos/placeholder.
+
 
 ---
 
@@ -138,22 +149,27 @@ public/
 
 ## Seguridad (estado actual)
 
-- Contraseñas almacenadas con **hash SHA-256 + salt** en el cliente.
-- Sesión con **expiración a 7 días**.
-- Sanitización de redirects (`returnTo`) e inputs básicos.
-- El store completo **no se expone** en el contexto de React (solo datos públicos del usuario).
+Con **Firebase configurado** (`VITE_FIREBASE_*` en `.env`):
 
-**Limitación:** al no haber backend, un usuario técnico puede inspeccionar o modificar `localStorage`. Esto es aceptable para demo/MVP, no para producción con pagos reales.
+- Auth real (email/contraseña) vía Firebase Authentication.
+- Usuarios y reservas en **Cloud Firestore** con reglas de seguridad.
+- Candados de horario (`slotLocks`) para evitar dobles reservas.
+- Rol **admin** y panel en `/admin` (ver `FIREBASE.md`).
+
+Sin Firebase, la app cae a modo **local** (`localStorage`) solo para prototipar.
+
+Guía completa: **[FIREBASE.md](./FIREBASE.md)**
+
 
 ---
 
 ## Próximos pasos sugeridos
 
-- [ ] API REST o Supabase/Firebase para usuarios y reservas
+- [x] Firebase Auth + Firestore para usuarios y reservas
+- [x] Panel admin básico
 - [ ] Integración de pagos (Mercado Pago, Stripe, etc.)
-- [ ] Panel de administración del complejo
-- [ ] Emails / WhatsApp de confirmación
 - [ ] Deploy (Vercel, Netlify, etc.) con HTTPS
+- [ ] Custom claims admin vía Cloud Functions (opcional, más robusto)
 
 ---
 

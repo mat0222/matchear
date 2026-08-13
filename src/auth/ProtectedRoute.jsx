@@ -3,8 +3,16 @@ import { useAuth } from './AuthProvider.jsx'
 import { sanitizeReturnTo } from '../lib/security.js'
 
 export function ProtectedRoute() {
-  const { isAuthed } = useAuth()
+  const { isAuthed, ready } = useAuth()
   const location = useLocation()
+
+  if (!ready) {
+    return (
+      <div className="flex min-h-[50vh] items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand border-t-transparent" />
+      </div>
+    )
+  }
 
   if (!isAuthed) {
     const returnTo = sanitizeReturnTo(

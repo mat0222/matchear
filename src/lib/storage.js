@@ -33,7 +33,10 @@ export function updateStore(mutator) {
 }
 
 export function uid(prefix = 'id') {
-  return `${prefix}_${Math.random().toString(16).slice(2)}_${Date.now().toString(16)}`
+  const bytes = new Uint8Array(8)
+  crypto.getRandomValues(bytes)
+  const rand = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')
+  return `${prefix}_${rand}_${Date.now().toString(16)}`
 }
 
 export const STORAGE_KEY = KEY

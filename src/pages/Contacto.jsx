@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { PageShell } from '../components/PageShell'
 import { PageHeader } from '../components/PageHeader'
 import { inputClass, labelClass, textareaClass } from '../lib/form'
+import { OWNER_WHATSAPP, isOwnerWhatsappConfigured } from '../lib/whatsapp'
 
 const address = 'Av. San Martín 1250, Villa del Rosario, Córdoba'
 const mapEmbedSrc =
@@ -13,10 +14,16 @@ const hours = [
   { day: 'Domingos y feriados', time: '09:00 – 22:00 hs' },
 ]
 
+const whatsappHref = isOwnerWhatsappConfigured() ? `https://wa.me/${OWNER_WHATSAPP}` : '#'
+
 const socials = [
   { name: 'Instagram', href: 'https://instagram.com', handle: '@matchear.vdr' },
   { name: 'Facebook', href: 'https://facebook.com', handle: 'Matchear Villa del Rosario' },
-  { name: 'WhatsApp', href: 'https://wa.me/5493515551234', handle: '+54 9 351 555-1234' },
+  {
+    name: 'WhatsApp',
+    href: whatsappHref,
+    handle: isOwnerWhatsappConfigured() ? `+${OWNER_WHATSAPP}` : 'Configurar VITE_WHATSAPP_OWNER',
+  },
 ]
 
 export default function Contacto() {

@@ -132,7 +132,7 @@ export function Navbar() {
   const close = () => setOpen(false)
 
   return (
-    <header className="sticky top-0 z-[110] border-b border-neutral-200/60 bg-white/90 shadow-nav backdrop-blur-xl">
+    <header className="sticky top-0 z-[110] border-b border-neutral-200 bg-white shadow-nav">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-brand/40 to-transparent" />
 
       <div className="mx-auto flex h-[4.75rem] max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
@@ -152,6 +152,14 @@ export function Navbar() {
         <div className="hidden items-center gap-3 lg:flex">
           {isAuthed ? (
             <>
+              {user?.role === 'admin' ? (
+                <Link
+                  to="/admin"
+                  className="rounded-full px-4 py-2 text-sm font-semibold text-brand transition hover:bg-brand/10"
+                >
+                  Admin
+                </Link>
+              ) : null}
               <Link
                 to="/mis-reservas"
                 className="rounded-full px-4 py-2 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-100 hover:text-neutral-950"
@@ -202,15 +210,15 @@ export function Navbar() {
       </div>
 
       {open ? (
-        <div className="fixed inset-0 top-[4.75rem] z-[100] flex flex-col bg-white/98 px-6 pb-10 pt-6 backdrop-blur-xl lg:hidden">
-          <div className="flex flex-col gap-1 rounded-2xl border border-neutral-100 bg-neutral-50/80 p-2 shadow-inner">
+        <div className="fixed inset-0 top-[4.75rem] z-[100] flex flex-col overflow-y-auto bg-white px-6 pb-10 pt-6 lg:hidden">
+          <div className="flex flex-col gap-1 rounded-2xl border border-neutral-200 bg-neutral-50 p-2">
             <NavLink
               to="/"
               end
               onClick={close}
               className={({ isActive }) =>
                 `rounded-xl px-4 py-3.5 text-base font-semibold ${
-                  isActive ? 'bg-white text-brand shadow-sm' : 'text-neutral-700'
+                  isActive ? 'bg-white text-brand shadow-sm' : 'text-neutral-800'
                 }`
               }
             >
@@ -221,7 +229,7 @@ export function Navbar() {
               onClick={close}
               className={({ isActive }) =>
                 `rounded-xl px-4 py-3.5 text-base font-semibold ${
-                  isActive ? 'bg-white text-brand shadow-sm' : 'text-neutral-700'
+                  isActive ? 'bg-white text-brand shadow-sm' : 'text-neutral-800'
                 }`
               }
             >
@@ -232,20 +240,20 @@ export function Navbar() {
               onClick={close}
               className={({ isActive }) =>
                 `rounded-xl px-4 py-3.5 text-base font-semibold ${
-                  isActive ? 'bg-white text-brand shadow-sm' : 'text-neutral-700'
+                  isActive ? 'bg-white text-brand shadow-sm' : 'text-neutral-800'
                 }`
               }
             >
               Torneos
             </NavLink>
 
-            <div className="mt-1 border-t border-neutral-200/80 pt-1">
+            <div className="mt-1 border-t border-neutral-200 pt-1">
               <button
                 type="button"
                 aria-expanded={complejoOpen}
                 onClick={() => setComplejoOpen((v) => !v)}
                 className={`flex w-full items-center justify-between rounded-xl px-4 py-3.5 text-base font-semibold ${
-                  complejoSectionActive ? 'bg-white text-brand shadow-sm' : 'text-neutral-700'
+                  complejoSectionActive ? 'bg-white text-brand shadow-sm' : 'text-neutral-800'
                 }`}
               >
                 El Complejo
@@ -262,7 +270,7 @@ export function Navbar() {
                       onClick={close}
                       className={({ isActive }) =>
                         `rounded-lg px-4 py-2.5 text-sm font-semibold ${
-                          isActive ? 'bg-brand/10 text-brand' : 'text-neutral-600'
+                          isActive ? 'bg-brand/10 text-brand' : 'text-neutral-700'
                         }`
                       }
                     >
@@ -276,10 +284,19 @@ export function Navbar() {
           <div className="mt-8 flex flex-col gap-3">
             {isAuthed ? (
               <>
+                {user?.role === 'admin' ? (
+                  <Link
+                    to="/admin"
+                    onClick={close}
+                    className="rounded-xl border border-brand/30 bg-brand/10 py-3.5 text-center text-base font-semibold text-brand shadow-sm"
+                  >
+                    Panel admin
+                  </Link>
+                ) : null}
                 <Link
                   to="/mis-reservas"
                   onClick={close}
-                  className="rounded-xl border border-neutral-200 bg-white py-3.5 text-center text-base font-semibold text-neutral-800 shadow-sm"
+                  className="rounded-xl border border-neutral-200 bg-neutral-50 py-3.5 text-center text-base font-semibold text-neutral-900 shadow-sm"
                 >
                   Mis reservas
                 </Link>
@@ -289,7 +306,7 @@ export function Navbar() {
                     logout()
                     close()
                   }}
-                  className="rounded-xl bg-neutral-100 py-3.5 text-center text-base font-semibold text-neutral-800"
+                  className="rounded-xl bg-neutral-100 py-3.5 text-center text-base font-semibold text-neutral-900"
                 >
                   Cerrar sesión ({user?.name})
                 </button>
@@ -299,7 +316,7 @@ export function Navbar() {
                 <Link
                   to="/login"
                   onClick={close}
-                  className="rounded-xl border border-neutral-200 bg-white py-3.5 text-center text-base font-semibold text-neutral-800 shadow-sm"
+                  className="rounded-xl border border-neutral-200 bg-neutral-50 py-3.5 text-center text-base font-semibold text-neutral-900 shadow-sm"
                 >
                   Iniciar sesión
                 </Link>
@@ -313,7 +330,7 @@ export function Navbar() {
               </>
             )}
           </div>
-          <p className="mt-auto text-center text-xs text-neutral-400">Matchear · Villa del Rosario</p>
+          <p className="mt-auto pt-8 text-center text-xs text-neutral-400">Matchear · Villa del Rosario</p>
         </div>
       ) : null}
     </header>

@@ -1,8 +1,12 @@
 import { PageShell } from '../components/PageShell'
 import { PageHeader } from '../components/PageHeader'
+import { OWNER_WHATSAPP, isOwnerWhatsappConfigured } from '../lib/whatsapp'
 
-const WHATSAPP_URL =
-  'https://wa.me/5493515551234?text=Hola%21%20Quiero%20consultar%20por%20la%20escuelita%20de%20f%C3%BAtbol%20en%20Matchear.'
+const WHATSAPP_URL = isOwnerWhatsappConfigured()
+  ? `https://wa.me/${OWNER_WHATSAPP}?text=${encodeURIComponent(
+      '¡Hola! Quiero consultar por la escuelita de fútbol en Matchear.',
+    )}`
+  : '#'
 
 const schedules = [
   { category: 'Categoría 2018–2019', days: 'Martes y jueves', time: '17:00 – 18:00 hs', ages: '6–7 años' },

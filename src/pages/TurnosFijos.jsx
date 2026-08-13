@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { PageShell } from '../components/PageShell'
 import { PageHeader } from '../components/PageHeader'
 import { inputClass, labelClass, selectClass, textareaClass } from '../lib/form'
+import { openWhatsappFixedSlotRequest } from '../lib/whatsapp'
 
 const benefits = [
   {
@@ -34,6 +35,18 @@ export default function TurnosFijos() {
 
   function handleSubmit(e) {
     e.preventDefault()
+    const data = new FormData(e.currentTarget)
+
+    openWhatsappFixedSlotRequest({
+      name: String(data.get('name') || '').trim(),
+      phone: String(data.get('phone') || '').trim(),
+      day: String(data.get('day') || ''),
+      hour: String(data.get('hour') || ''),
+      format: String(data.get('format') || ''),
+      period: String(data.get('period') || ''),
+      notes: String(data.get('notes') || ''),
+    })
+
     setSent(true)
   }
 
@@ -69,7 +82,7 @@ export default function TurnosFijos() {
 
           {sent ? (
             <p className="mt-6 rounded-xl bg-brand-muted px-4 py-3 text-sm font-semibold text-brand">
-              ¡Listo! Revisamos disponibilidad y te contactamos en breve.
+              ¡Listo! Se abrió WhatsApp con tu solicitud al complejo. Enviá el mensaje y te respondemos a la brevedad.
             </p>
           ) : (
             <form className="mt-6 space-y-4" onSubmit={handleSubmit}>

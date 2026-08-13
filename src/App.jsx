@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { ProtectedRoute } from './auth/ProtectedRoute'
+import { AdminRoute } from './auth/AdminRoute'
 
 const Home = lazy(() => import('./pages/Home'))
 const Canchas = lazy(() => import('./pages/Canchas'))
@@ -13,6 +14,7 @@ const Escuelita = lazy(() => import('./pages/Escuelita'))
 const Contacto = lazy(() => import('./pages/Contacto'))
 const Login = lazy(() => import('./pages/Login'))
 const Register = lazy(() => import('./pages/Register'))
+const Admin = lazy(() => import('./pages/Admin'))
 
 function PageLoader() {
   return (
@@ -39,6 +41,9 @@ export default function App() {
           <Route path="/registro" element={<Register />} />
           <Route element={<ProtectedRoute />}>
             <Route path="/mis-reservas" element={<MyBookings />} />
+          </Route>
+          <Route element={<AdminRoute />}>
+            <Route path="/admin" element={<Admin />} />
           </Route>
         </Routes>
       </Suspense>

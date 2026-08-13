@@ -8,23 +8,10 @@ function BackIcon() {
   )
 }
 
-function AuthDivider() {
-  return (
-    <div className="relative my-6">
-      <div className="absolute inset-0 flex items-center" aria-hidden>
-        <div className="w-full border-t border-neutral-200" />
-      </div>
-      <div className="relative flex justify-center text-xs font-semibold uppercase tracking-wider">
-        <span className="bg-white px-3 text-neutral-400">o con tu email</span>
-      </div>
-    </div>
-  )
-}
-
 const AUTH_IMAGE =
   'https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=1600&q=80'
 
-export function AuthShell({ title, subtitle, children, footer, googleSection }) {
+export function AuthShell({ title, subtitle, children, footer }) {
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
       <div className="flex flex-col justify-center bg-white px-6 py-10 sm:px-10 lg:px-14 xl:px-20">
@@ -40,11 +27,7 @@ export function AuthShell({ title, subtitle, children, footer, googleSection }) 
           <h1 className="mt-10 text-3xl font-extrabold tracking-tight text-neutral-950 sm:text-4xl">{title}</h1>
           {subtitle ? <p className="mt-2 text-base text-neutral-500">{subtitle}</p> : null}
 
-          <div className="mt-8">
-            {googleSection}
-            <AuthDivider />
-            {children}
-          </div>
+          <div className="mt-8">{children}</div>
 
           {footer ? <div className="mt-8 text-sm text-neutral-600">{footer}</div> : null}
         </div>

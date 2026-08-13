@@ -1,16 +1,14 @@
 import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { AuthShell } from '../components/AuthShell'
-import { GoogleSignIn } from '../components/GoogleSignIn'
 import { useAuth } from '../auth/AuthProvider'
-import { parseGoogleCredential } from '../lib/google'
 import { sanitizeReturnTo } from '../lib/security'
 import { inputClass, labelClass } from '../lib/form'
 
 export default function Register() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const { register, loginWithGoogle, loginWithGoogleDemo } = useAuth()
+  const { register, backend } = useAuth()
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const returnTo = sanitizeReturnTo(searchParams.get('returnTo'))
@@ -24,6 +22,12 @@ export default function Register() {
     setError('')
     setLoading(true)
     const fd = new FormData(e.currentTarget)
+
+    if (String(fd.get('company_website') || '').trim()) {
+      setLoading(false)
+      return
+    }
+
     try {
       const res = await register({
         name: String(fd.get('name')),
@@ -31,7 +35,7 @@ export default function Register() {
         password: String(fd.get('password')),
       })
       if (!res.ok) {
-        setError('Revisá los datos ingresados o usá otro email.')
+        setError(res.message || 'Revisá los datos ingresados o usá otro email.')
         return
       }
       goNext()
@@ -40,62 +44,63 @@ export default function Register() {
     }
   }
 
-  function handleGoogleCredential(credential) {
-    setError('')
-    const profile = parseGoogleCredential(credential)
-    if (!profile) {
-      setError('No se pudo validar la cuenta de Google.')
-      return
-    }
-    const res = loginWithGoogle(profile)
-    if (!res.ok) {
-      setError('No se pudo registrarse con Google.')
-      return
-    }
-    goNext()
-  }
-
-  function handleGoogleDemo() {
-    setError('')
-    const res = loginWithGoogleDemo()
-    if (!res.ok) {
-      setError('No se pudo registrarse con Google.')
-      return
-    }
-    goNext()
-  }
-
   return (
     <AuthShell
       title="Crear cuenta"
       subtitle="Unite a Matchear en segundos y empezá a reservar canchas con los mejores precios."
-      googleSection={
-        <GoogleSignIn label="register" onSuccess={handleGoogleCredential} onDemo={handleGoogleDemo} />
-      }
       footer={
         <>
           <span>¿Ya tenés cuenta? </span>
           <Link to={`/login?returnTo=${encodeURIComponent(returnTo)}`} className="font-bold text-brand hover:underline">
             Iniciar sesión
           </Link>
+          {backend === 'local' ? (
+            <p className="mt-2 text-xs text-amber-700">
+              Modo local (sin Firebase). Configurá VITE_FIREBASE_* en .env para producción.
+            </p>
+          ) : null}
         </>
       }
     >
-      <form className="space-y-5" onSubmit={handleSubmit}>
+      <form className="space-y-5" onSubmit={handleSubmit} autoComplete="on">
         {error ? (
-          <p className="rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</p>
+          <p className="rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700" role="alert">
+            {error}
+          </p>
         ) : null}
+
+        <div className="absolute -left-[9999px] h-0 w-0 overflow-hidden" aria-hidden="true">
+          <label htmlFor="company_website">Sitio web</label>
+          <input id="company_website" name="company_website" type="text" tabIndex={-1} autoComplete="off" />
+        </div>
+
         <div>
           <label htmlFor="name" className={labelClass}>
             Nombre completo
           </label>
-          <input id="name" name="name" type="text" autoComplete="name" required className={inputClass} />
+          <input
+            id="name"
+            name="name"
+            type="text"
+            autoComplete="name"
+            required
+            maxLength={80}
+            className={inputClass}
+          />
         </div>
         <div>
           <label htmlFor="email" className={labelClass}>
             Email
           </label>
-          <input id="email" name="email" type="email" autoComplete="email" required className={inputClass} />
+          <input
+            id="email"
+            name="email"
+            type="email"
+            autoComplete="email"
+            required
+            maxLength={254}
+            className={inputClass}
+          />
         </div>
         <div>
           <label htmlFor="password" className={labelClass}>
@@ -107,10 +112,14 @@ export default function Register() {
             type="password"
             autoComplete="new-password"
             required
-            minLength={6}
+            minLength={8}
+            maxLength={128}
             className={inputClass}
-            placeholder="Mínimo 6 caracteres"
+            placeholder="Mín. 8 caracteres, letra y número"
           />
+          <p className="mt-2 text-xs text-neutral-500">
+            Mínimo 8 caracteres, con al menos una letra y un número.
+          </p>
         </div>
         <button
           type="submit"

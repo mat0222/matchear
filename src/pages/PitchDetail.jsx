@@ -1,11 +1,13 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { PageShell } from '../components/PageShell'
 import { PageHeader } from '../components/PageHeader'
 import { Countdown } from '../components/Countdown'
 import { useAuth } from '../auth/AuthProvider'
+import { inputClass, labelClass } from '../lib/form'
 import { buildHourlySlots } from '../lib/slots'
 import { addDays, formatARS, isoDay, prettyDay } from '../lib/time'
+import { openWhatsappToOwner } from '../lib/whatsapp'
 
 const SLOTS = buildHourlySlots({ startHour: 9, endHour: 22 })
 
@@ -18,54 +20,101 @@ const PAYMENT_METHODS = [
 export default function PitchDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { getPitch, isAuthed, createBookingAndPayment, listAvailability, payDeposit, settings } =
-    useAuth()
+  const {
+    getPitch,
+    isAuthed,
+    createBookingAndPayment,
+    listAvailability,
+    watchAvailability,
+    payDeposit,
+    settings,
+  } = useAuth()
 
   const pitch = getPitch(id)
   const [day, setDay] = useState(() => isoDay(new Date()))
   const [slot, setSlot] = useState(SLOTS[0])
   const [payMode, setPayMode] = useState('deposit')
   const [method, setMethod] = useState(PAYMENT_METHODS[0].id)
+  const [whatsapp, setWhatsapp] = useState('')
   const [status, setStatus] = useState(null)
+  const [errorMessage, setErrorMessage] = useState('')
+  const [confirmationUrl, setConfirmationUrl] = useState('')
   const [pending, setPending] = useState(null)
+  const [submitting, setSubmitting] = useState(false)
+  const [availTick, setAvailTick] = useState(0)
 
   const dayOptions = useMemo(
     () => Array.from({ length: 7 }, (_, i) => isoDay(addDays(new Date(), i))),
     [],
   )
 
+  useEffect(() => {
+    if (!pitch?.id || !watchAvailability) return undefined
+    return watchAvailability(pitch.id, day, () => setAvailTick((n) => n + 1))
+  }, [pitch?.id, day, watchAvailability])
+
   const availability = pitch
     ? listAvailability({ pitchId: pitch.id, date: day, slots: SLOTS })
     : []
+  void availTick
   const selectedStatus = availability.find((a) => a.slot === slot)?.status
   const canReserve = selectedStatus === 'free'
   const depositAmount = settings.depositAmount ?? 5000
   const holdMinutes = settings.depositHoldMinutes ?? 15
   const total = payMode === 'deposit' ? depositAmount : pitch?.price || 0
 
-  function onReserve() {
-    if (!pitch) return
+  async function onReserve() {
+    if (!pitch || submitting) return
+    setErrorMessage('')
+    setConfirmationUrl('')
     const returnTo = `/canchas/${pitch.id}`
     if (!isAuthed) {
       navigate(`/login?returnTo=${encodeURIComponent(returnTo)}`)
       return
     }
-    const res = createBookingAndPayment({
-      pitchId: pitch.id,
-      slot,
-      date: day,
-      paymentMethod: { method, mode: payMode },
-    })
-    if (!res.ok) {
-      setStatus('err')
-      return
+
+    setSubmitting(true)
+    try {
+      const res = await createBookingAndPayment({
+        pitchId: pitch.id,
+        slot,
+        date: day,
+        whatsapp,
+        paymentMethod: { method, mode: payMode },
+      })
+      if (!res.ok) {
+        setErrorMessage(
+          res.error === 'INVALID_WHATSAPP'
+            ? 'Ingresá un número de WhatsApp válido con código de área.'
+            : res.error === 'RATE_LIMITED' || res.error === 'DAILY_LIMIT'
+              ? res.message || 'Límite de reservas alcanzado. Probá más tarde.'
+              : res.error === 'INVALID_SLOT'
+                ? 'Día u horario inválido.'
+                : 'No se pudo reservar. El horario puede haber sido ocupado.',
+        )
+        setStatus('err')
+        return
+      }
+
+      const url = openWhatsappToOwner({
+        pitchName: pitch.name,
+        date: day,
+        slot,
+        paymentMethod: method,
+        customerWhatsapp: whatsapp,
+        status: 'confirmed',
+      })
+      setConfirmationUrl(url)
+
+      if (payMode === 'deposit') {
+        setPending({ paymentId: res.paymentId, expiresAt: res.expiresAt })
+        setStatus('pending')
+        return
+      }
+      setStatus('ok')
+    } finally {
+      setSubmitting(false)
     }
-    if (payMode === 'deposit') {
-      setPending({ paymentId: res.paymentId, expiresAt: res.expiresAt })
-      setStatus('pending')
-      return
-    }
-    setStatus('ok')
   }
 
   if (!pitch) {
@@ -238,13 +287,38 @@ export default function PitchDetail() {
                 </div>
               </dl>
 
+              <div className="mt-6 border-t border-neutral-100 pt-5">
+                <label htmlFor="booking-whatsapp" className={labelClass}>
+                  WhatsApp de confirmación
+                </label>
+                <input
+                  id="booking-whatsapp"
+                  type="tel"
+                  inputMode="tel"
+                  autoComplete="tel"
+                  value={whatsapp}
+                  onChange={(event) => setWhatsapp(event.target.value)}
+                  className={inputClass}
+                  placeholder="Ej: 351 555 1234"
+                  aria-describedby="whatsapp-help"
+                />
+                <p id="whatsapp-help" className="mt-2 text-xs leading-relaxed text-neutral-500">
+                  Al confirmar se abre WhatsApp al complejo con tu reserva ya escrita. Dejá tu número
+                  para que te puedan contactar.
+                </p>
+              </div>
+
               <button
                 type="button"
                 onClick={onReserve}
-                disabled={!canReserve}
+                disabled={!canReserve || submitting}
                 className="mt-6 w-full rounded-xl bg-gradient-to-r from-brand to-brand-dark py-3.5 text-sm font-extrabold text-white shadow-lg shadow-brand/25 transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {payMode === 'deposit' ? 'Reservar con seña' : 'Reservar y pagar'}
+                {submitting
+                  ? 'Confirmando…'
+                  : payMode === 'deposit'
+                    ? 'Reservar con seña'
+                    : 'Reservar y pagar'}
               </button>
 
               {!canReserve ? (
@@ -286,6 +360,16 @@ export default function PitchDetail() {
                   <p className="rounded-xl bg-emerald-50 p-3 text-xs font-semibold text-emerald-700">
                     ¡Reserva confirmada!
                   </p>
+                  {confirmationUrl ? (
+                    <a
+                      href={confirmationUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block rounded-xl bg-[#25D366] px-4 py-2.5 text-center text-xs font-extrabold text-white"
+                    >
+                      Si no se abrió, tocá acá para avisar por WhatsApp
+                    </a>
+                  ) : null}
                   <Link
                     to="/mis-reservas"
                     className="block text-center text-sm font-bold text-brand hover:underline"
@@ -297,7 +381,7 @@ export default function PitchDetail() {
 
               {status === 'err' ? (
                 <p className="mt-4 rounded-xl bg-red-50 p-3 text-xs font-semibold text-red-700">
-                  No se pudo reservar. Intentá de nuevo.
+                  {errorMessage || 'No se pudo reservar. Intentá de nuevo.'}
                 </p>
               ) : null}
             </div>
