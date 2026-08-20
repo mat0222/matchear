@@ -33,32 +33,41 @@ export function buildBookingMessage({
 
   if (status === 'cancelled') {
     return (
-      `¡Hola! Cancelo mi reserva desde la web:\n` +
-      `⚽ *Cancha:* ${pitchName}\n` +
-      `📅 *Día:* ${dia}\n` +
-      `⏰ *Hora:* ${hora}\n` +
-      `💳 *Pago:* ${pago}` +
-      (customerWhatsapp ? `\n📱 *Mi WhatsApp:* ${customerWhatsapp}` : '')
+      `Hola! Cancelo mi reserva desde la web:\n` +
+      `Cancha: ${pitchName}\n` +
+      `Dia: ${dia}\n` +
+      `Hora: ${hora}\n` +
+      `Pago: ${pago}` +
+      (customerWhatsapp ? `\nMi WhatsApp: ${customerWhatsapp}` : '')
     )
   }
 
   return (
-    `¡Hola! Acabo de hacer una reserva desde la web:\n` +
-    `⚽ *Cancha:* ${pitchName}\n` +
-    `📅 *Día:* ${dia}\n` +
-    `⏰ *Hora:* ${hora}\n` +
-    `💳 *Pago:* ${pago}` +
-    (customerWhatsapp ? `\n📱 *Mi WhatsApp:* ${customerWhatsapp}` : '')
+    `Hola! Acabo de hacer una reserva desde la web:\n` +
+    `Cancha: ${pitchName}\n` +
+    `Dia: ${dia}\n` +
+    `Hora: ${hora}\n` +
+    `Pago: ${pago}` +
+    (customerWhatsapp ? `\nMi WhatsApp: ${customerWhatsapp}` : '')
   )
 }
 
-/**
- * Enlace wa.me al número del dueño, con el mensaje ya redactado.
- * https://wa.me/<NUMERO>?text=<MENSAJE_ENCODIFICADO>
- */
-export function whatsappOwnerUrl(message, phone = OWNER_WHATSAPP) {
+function ownerDigits(phone = OWNER_WHATSAPP) {
   const digits = String(phone || '').replace(/\D/g, '')
-  if (digits.length < 10) return null
+  return digits.length >= 10 ? digits : null
+}
+
+/** Abre la app de WhatsApp (sin la página intermedia de wa.me). */
+export function whatsappAppUrl(message, phone = OWNER_WHATSAPP) {
+  const digits = ownerDigits(phone)
+  if (!digits) return null
+  return `whatsapp://send?phone=${digits}&text=${encodeURIComponent(message)}`
+}
+
+/** Respaldo por si no está instalada la app. */
+export function whatsappOwnerUrl(message, phone = OWNER_WHATSAPP) {
+  const digits = ownerDigits(phone)
+  if (!digits) return null
   return `https://wa.me/${digits}?text=${encodeURIComponent(message)}`
 }
 
@@ -73,36 +82,30 @@ export function buildFixedSlotMessage({ name, phone, day, hour, format, period, 
   const hora = hour?.includes('hs') ? hour : `${hour} hs`
 
   return (
-    `¡Hola! Solicito un *turno fijo* desde la web:\n` +
-    `👤 *Nombre:* ${name}\n` +
-    `📱 *WhatsApp:* ${phone}\n` +
-    `📅 *Día:* ${day}\n` +
-    `⏰ *Horario:* ${hora}\n` +
-    `⚽ *Formato:* ${format}\n` +
-    `📆 *Período:* ${periodo}` +
-    (notes?.trim() ? `\n📝 *Detalles:* ${notes.trim()}` : '')
+    `Hola! Solicito un turno fijo desde la web:\n` +
+    `Nombre: ${name}\n` +
+    `WhatsApp: ${phone}\n` +
+    `Dia: ${day}\n` +
+    `Horario: ${hora}\n` +
+    `Formato: ${format}\n` +
+    `Periodo: ${periodo}` +
+    (notes?.trim() ? `\nDetalles: ${notes.trim()}` : '')
   )
 }
 
-/** Abre WhatsApp. `popup` debe crearse en el mismo clic (antes de await) para no ser bloqueado. */
+/** Abre la app de WhatsApp. `popup` se cierra: el protocolo nativo no usa pestaña nueva. */
 export function openWhatsappMessageToOwner(message, popup) {
-  const url = whatsappOwnerUrl(message)
-  if (!url) {
-    try {
-      popup?.close()
-    } catch {
-      /* ignore */
-    }
-    return null
+  try {
+    popup?.close()
+  } catch {
+    /* ignore */
   }
 
-  if (popup && !popup.closed) {
-    popup.location.replace(url)
-    return url
-  }
+  const appUrl = whatsappAppUrl(message)
+  if (!appUrl) return null
 
-  window.open(url, '_blank')
-  return url
+  window.location.href = appUrl
+  return whatsappOwnerUrl(message)
 }
 
 export function openWhatsappToOwner(payload, popup) {
