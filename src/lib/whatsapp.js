@@ -94,15 +94,18 @@ export function openWhatsappMessageToOwner(message, popup) {
   const webUrl = whatsappOwnerUrl(message)
   if (!webUrl) return null
 
-  const tab = popup && !popup.closed ? popup : window.open(webUrl, '_blank')
-  if (tab) {
+  if (popup && !popup.closed) {
     try {
-      tab.location.href = webUrl
+      popup.location.href = webUrl
+      return webUrl
     } catch {
-      window.open(webUrl, '_blank')
+      /* ignore */
     }
-  } else {
-    window.open(webUrl, '_blank')
+  }
+
+  const tab = window.open(webUrl, '_blank')
+  if (!tab && isMobileDevice()) {
+    window.location.href = webUrl
   }
   return webUrl
 }

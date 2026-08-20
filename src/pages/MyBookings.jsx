@@ -5,7 +5,7 @@ import { PageHeader } from '../components/PageHeader'
 import { Countdown } from '../components/Countdown'
 import { useAuth } from '../auth/AuthProvider'
 import { formatARS } from '../lib/time'
-import { openBlankTab, openWhatsappToOwner } from '../lib/whatsapp'
+import { buildBookingMessage, openBlankTab, openWhatsappMessageToOwner, whatsappOwnerUrl } from '../lib/whatsapp'
 
 function statusLabel(b) {
   if (b.status === 'pending_payment') return 'Pendiente de pago'
@@ -21,11 +21,6 @@ export default function MyBookings() {
   const bookings = myBookings()
 
   async function handleCancel(booking) {
-    const confirmed = window.confirm(
-      `¿Querés cancelar ${booking.pitch?.name || 'la cancha'} del ${booking.date} a las ${booking.slot} hs?`,
-    )
-    if (!confirmed) return
-
     const waPayload = {
       pitchName: booking.pitch?.name || 'la cancha',
       date: booking.date,
@@ -34,7 +29,23 @@ export default function MyBookings() {
       customerWhatsapp: booking.whatsapp,
       status: 'cancelled',
     }
+    const message = buildBookingMessage(waPayload)
+    const whatsappUrl = whatsappOwnerUrl(message)
+
+    // Abrí la pestaña en el mismo clic, antes del confirm (si no, el navegador la bloquea).
     const popup = openBlankTab()
+
+    const confirmed = window.confirm(
+      `¿Querés cancelar ${booking.pitch?.name || 'la cancha'} del ${booking.date} a las ${booking.slot} hs?`,
+    )
+    if (!confirmed) {
+      try {
+        popup?.close()
+      } catch {
+        /* ignore */
+      }
+      return
+    }
 
     const result = await cancelBooking({ bookingId: booking.id })
     if (!result.ok) {
@@ -47,7 +58,7 @@ export default function MyBookings() {
       return
     }
 
-    const whatsappUrl = openWhatsappToOwner(waPayload, popup)
+    openWhatsappMessageToOwner(message, popup)
 
     setNotice({
       type: 'success',
@@ -81,9 +92,9 @@ export default function MyBookings() {
                 href={notice.whatsappUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-2 inline-flex font-extrabold underline"
+                className="mt-3 inline-flex rounded-xl bg-[#25D366] px-4 py-2.5 text-xs font-extrabold text-white"
               >
-                Abrir aviso de cancelación en WhatsApp de nuevo
+                Avisar cancelación por WhatsApp
               </a>
             ) : null}
           </div>
