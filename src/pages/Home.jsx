@@ -1,15 +1,33 @@
 import { Link } from 'react-router-dom'
 import { PageShell } from '../components/PageShell'
+import { FadeIn } from '../components/FadeIn'
 
-const HERO_BG =
-  "linear-gradient(to bottom, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.72) 100%), url('https://images.unsplash.com/photo-1529900748594-e0ca187d6642?auto=format&fit=crop&w=2000&q=80')"
-const CLEATS_IMG =
-  'https://images.unsplash.com/photo-1614632537423-23e93acf2f61?auto=format&fit=crop&w=800&q=80'
+const HERO_IMG =
+  'https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=1600&q=75'
 
 function MapPinIcon(props) {
   return (
     <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden className={props.className}>
       <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z" />
+    </svg>
+  )
+}
+
+function PitchLines() {
+  return (
+    <svg
+      className="pointer-events-none absolute inset-0 h-full w-full opacity-[0.12]"
+      viewBox="0 0 800 450"
+      fill="none"
+      aria-hidden
+      preserveAspectRatio="xMidYMid slice"
+    >
+      <rect x="40" y="30" width="720" height="390" rx="8" stroke="white" strokeWidth="3" />
+      <line x1="400" y1="30" x2="400" y2="420" stroke="white" strokeWidth="2" />
+      <circle cx="400" cy="225" r="70" stroke="white" strokeWidth="2" />
+      <circle cx="400" cy="225" r="4" fill="white" />
+      <rect x="40" y="120" width="110" height="210" stroke="white" strokeWidth="2" />
+      <rect x="650" y="120" width="110" height="210" stroke="white" strokeWidth="2" />
     </svg>
   )
 }
@@ -47,65 +65,86 @@ const features = [
 export default function Home() {
   return (
     <PageShell>
-      <section
-        className="relative flex min-h-[88vh] flex-col items-center justify-center overflow-hidden bg-neutral-950 bg-cover bg-center px-4 py-24 text-center sm:px-6"
-        style={{ backgroundImage: HERO_BG }}
-      >
-        <div className="pointer-events-none absolute inset-0 bg-hero-mesh" />
-        <div className="pointer-events-none absolute -left-24 top-1/4 h-72 w-72 rounded-full bg-brand/20 blur-3xl" />
-        <div className="pointer-events-none absolute -right-24 bottom-1/4 h-80 w-80 rounded-full bg-white/10 blur-3xl" />
+      <section className="relative isolate min-h-[calc(100vh-4.75rem-0.25rem)] overflow-hidden bg-neutral-950">
+        <img
+          src={HERO_IMG}
+          alt="Partido de fútbol bajo reflectores"
+          fetchPriority="high"
+          decoding="async"
+          width={1600}
+          height={900}
+          className="absolute inset-0 h-full w-full object-cover object-[center_30%] motion-safe:animate-ken-burns"
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/55 to-black/25" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/25" />
+        <PitchLines />
+        <div className="pointer-events-none absolute -left-16 top-24 h-72 w-72 rounded-full bg-brand/25 blur-3xl" />
+        <div className="pointer-events-none absolute bottom-10 right-0 h-80 w-80 rounded-full bg-brand/15 blur-3xl" />
 
-        <div className="relative z-10 flex max-w-4xl flex-col items-center">
-          <span className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-white/90 backdrop-blur-md sm:text-[0.7rem]">
-            <span className="h-1.5 w-1.5 rounded-full bg-brand shadow-[0_0_12px_#FF4B4B]" />
-            Reservá canchas en minutos
-          </span>
+        <div className="relative z-10 mx-auto flex min-h-[calc(100vh-4.75rem-0.25rem)] max-w-7xl flex-col justify-end px-4 pb-10 pt-20 sm:px-6 sm:pb-12 lg:justify-center lg:px-8 lg:pb-24 lg:pt-12">
+          <div className="max-w-2xl motion-safe:animate-fade-in">
+            <span className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-[0.7rem] font-bold uppercase tracking-[0.18em] text-white backdrop-blur-md">
+              <span className="h-2 w-2 animate-pulseDot rounded-full bg-brand shadow-[0_0_12px_#FF4B4B]" />
+              En juego · Reservá en minutos
+            </span>
 
-          <div className="mb-8 flex justify-center">
-            <div className="rounded-3xl border border-white/15 bg-white/5 p-4 shadow-2xl backdrop-blur-sm">
-              <img
-                src={CLEATS_IMG}
-                alt=""
-                className="h-24 w-auto object-contain drop-shadow-[0_20px_50px_rgba(0,0,0,0.45)] sm:h-32"
-              />
+            <h1 className="mt-6 text-balance text-4xl font-extrabold uppercase leading-[0.95] tracking-tight text-white sm:text-6xl lg:text-7xl">
+              Tu cancha.
+              <span className="block text-brand">Tu horario.</span>
+              <span className="block">Tu partido.</span>
+            </h1>
+
+            <p className="mt-5 max-w-lg text-pretty text-base font-medium leading-relaxed text-white/85 sm:text-lg">
+              Alquilá canchas de fútbol en Villa del Rosario con precios claros, turnos libres y confirmación al toque.
+            </p>
+
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
+              <Link
+                to="/canchas"
+                className="inline-flex min-w-[200px] items-center justify-center gap-2 rounded-full bg-gradient-to-r from-brand to-brand-dark px-8 py-4 text-sm font-extrabold uppercase tracking-wide text-white shadow-xl shadow-brand/40 transition hover:brightness-110 hover:shadow-glow"
+              >
+                Ver canchas
+                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M5 12h14M13 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </Link>
+              <Link
+                to="/registro"
+                className="inline-flex min-w-[200px] items-center justify-center rounded-full border-2 border-white/50 bg-white/10 px-8 py-4 text-sm font-bold uppercase tracking-wide text-white backdrop-blur-sm transition hover:border-white hover:bg-white/20"
+              >
+                Crear cuenta
+              </Link>
             </div>
           </div>
 
-          <h1 className="text-balance text-3xl font-extrabold uppercase leading-[1.1] tracking-tight text-white sm:text-5xl md:text-6xl md:leading-[1.05]">
-            ¡Alquila y ahorra en canchas de fútbol en tu ciudad!
-          </h1>
-          <p className="mt-5 max-w-2xl text-pretty text-base font-medium text-white/85 sm:text-lg">
-            Obtén grandes descuentos y empezá a ahorrar con Matchear. Canchas listas, precios claros.
+          <div className="mt-12 grid grid-cols-1 gap-3 sm:grid-cols-3 lg:mt-16 lg:max-w-3xl">
+            {[
+              { label: 'Canchas', value: '5v5 a 9v9' },
+              { label: 'Horario', value: '09 a 22 hs' },
+              { label: 'Ubicación', value: 'Villa del Rosario' },
+            ].map((stat, i) => (
+              <FadeIn
+                key={stat.label}
+                delay={280 + i * 70}
+                className="rounded-2xl border border-white/15 bg-black/35 px-5 py-4 backdrop-blur-md"
+              >
+                <p className="text-[0.65rem] font-bold uppercase tracking-[0.18em] text-brand">{stat.label}</p>
+                <p className="mt-1 text-sm font-extrabold text-white sm:text-base">{stat.value}</p>
+              </FadeIn>
+            ))}
+          </div>
+
+          <p className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-white/80">
+            <MapPinIcon className="h-4 w-4 text-brand" />
+            Córdoba, Argentina
           </p>
-
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-            <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-black/25 px-4 py-2 text-sm font-semibold text-white backdrop-blur-md">
-              <MapPinIcon className="h-5 w-5 text-brand" />
-              Villa del Rosario, Córdoba
-            </span>
-          </div>
-
-          <div className="mt-10 flex flex-col items-center gap-3 sm:flex-row sm:gap-4">
-            <Link
-              to="/registro"
-              className="inline-flex min-w-[220px] items-center justify-center rounded-full bg-gradient-to-r from-brand to-brand-dark px-10 py-4 text-sm font-extrabold uppercase tracking-wide text-white shadow-xl shadow-brand/40 ring-2 ring-white/25 transition hover:brightness-110 hover:shadow-glow"
-            >
-              ¡Regístrate hoy!
-            </Link>
-            <Link
-              to="/canchas"
-              className="inline-flex min-w-[220px] items-center justify-center rounded-full border-2 border-white/40 bg-white/10 px-10 py-4 text-sm font-bold uppercase tracking-wide text-white backdrop-blur-sm transition hover:bg-white/20"
-            >
-              Ver canchas
-            </Link>
-          </div>
         </div>
       </section>
 
       <section className="relative border-b border-neutral-100 bg-white px-4 py-20 sm:px-6">
         <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-brand-muted/50 to-transparent" />
         <div className="relative mx-auto max-w-6xl">
-          <div className="mx-auto max-w-2xl text-center">
+          <FadeIn className="mx-auto max-w-2xl text-center">
             <p className="text-sm font-bold uppercase tracking-[0.2em] text-brand">Ventajas</p>
             <h2 className="mt-3 text-3xl font-extrabold text-neutral-950 sm:text-4xl">
               ¿Por qué elegir Matchear?
@@ -113,14 +152,14 @@ export default function Home() {
             <p className="mt-4 text-neutral-600">
               Diseñamos la experiencia para que jugar sea simple: menos vueltas, más partidos.
             </p>
-          </div>
+          </FadeIn>
 
           <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {features.map((item, i) => (
-              <div
+              <FadeIn
                 key={item.title}
+                delay={i * 90}
                 className="group relative overflow-hidden rounded-3xl border border-neutral-100 bg-white p-8 shadow-card transition duration-300 hover:-translate-y-1 hover:border-brand/20 hover:shadow-card-hover"
-                style={{ animationDelay: `${i * 80}ms` }}
               >
                 <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-brand-muted/80 transition group-hover:bg-brand/15" />
                 <div className="relative flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-muted text-brand ring-1 ring-brand/15">
@@ -131,7 +170,7 @@ export default function Home() {
                 <h3 className="relative mt-5 text-xl font-bold text-neutral-950">{item.title}</h3>
                 <p className="relative mt-2 text-sm leading-relaxed text-neutral-600">{item.text}</p>
                 <div className="relative mt-6 h-1 w-12 rounded-full bg-gradient-to-r from-brand to-brand-dark opacity-60" />
-              </div>
+              </FadeIn>
             ))}
           </div>
         </div>

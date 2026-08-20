@@ -54,7 +54,7 @@ export default function Register() {
           <Link to={`/login?returnTo=${encodeURIComponent(returnTo)}`} className="font-bold text-brand hover:underline">
             Iniciar sesión
           </Link>
-          {backend === 'local' ? (
+          {backend === 'local' && import.meta.env.DEV ? (
             <p className="mt-2 text-xs text-amber-700">
               Modo local (sin Firebase). Configurá VITE_FIREBASE_* en .env para producción.
             </p>

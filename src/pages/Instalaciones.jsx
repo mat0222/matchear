@@ -37,15 +37,15 @@ const gallery = [
 const facilities = [
   {
     title: 'Asadores',
-    text: 'Parrillas cubiertas para que tu equipo siga la jornada después del partido. Traé tu carne o pedí en cantina.',
+    text: 'Parrillas cubiertas para que tu equipo siga la jornada después del partido.',
   },
   {
     title: 'Buffet y cantina',
     text: 'Hamburguesas, picadas, bebidas frías y café. Todo listo para el antes y el después del encuentro.',
   },
   {
-    title: 'Vestuarios con duchas',
-    text: 'Amplios, limpios y con agua caliente. Toallas y lockers disponibles en horario de partidos.',
+    title: 'Baños',
+    text: 'Amplios, limpios y con agua caliente. Toallas disponibles en horario de partidos.',
   },
   {
     title: 'Estacionamiento privado',

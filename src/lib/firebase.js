@@ -1,6 +1,9 @@
 import { initializeApp, getApps } from 'firebase/app'
 import { getAuth } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
+import { ADMIN_EMAIL, isFirebaseConfigured } from './firebaseConfig.js'
+
+export { ADMIN_EMAIL, isFirebaseConfigured }
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -10,18 +13,6 @@ const firebaseConfig = {
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
 }
-
-export const isFirebaseConfigured = Boolean(
-  firebaseConfig.apiKey &&
-    firebaseConfig.authDomain &&
-    firebaseConfig.projectId &&
-    firebaseConfig.appId,
-)
-
-/** Email que recibe rol admin al crear su perfil (solo la primera vez; las reglas bloquean auto-escalada). */
-export const ADMIN_EMAIL = String(import.meta.env.VITE_ADMIN_EMAIL || '')
-  .trim()
-  .toLowerCase()
 
 let app = null
 let auth = null

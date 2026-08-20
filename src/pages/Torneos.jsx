@@ -272,9 +272,8 @@ export default function Torneos() {
                 </label>
                 <select id="teams" name="teams" required className={selectClass}>
                   <option value="">Elegí una opción</option>
-                  <option value="6">6 equipos</option>
+                  <option value="6">4 equipos</option>
                   <option value="8">8 equipos</option>
-                  <option value="10">10 equipos</option>
                   <option value="12">12 equipos o más</option>
                 </select>
               </div>

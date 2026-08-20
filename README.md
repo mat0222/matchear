@@ -147,6 +147,14 @@ public/
 
 ---
 
+## Desplegar en producción
+
+Guía para activar Firebase en Vercel/Netlify: **[DEPLOY.md](./DEPLOY.md)**
+
+Las variables `VITE_FIREBASE_*` deben cargarse en el hosting **antes** del build y luego redeploy.
+
+---
+
 ## Seguridad (estado actual)
 
 Con **Firebase configurado** (`VITE_FIREBASE_*` en `.env`):

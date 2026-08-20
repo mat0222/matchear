@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { FadeIn } from './FadeIn'
 
 function BackIcon() {
   return (
@@ -9,43 +10,59 @@ function BackIcon() {
 }
 
 const AUTH_IMAGE =
-  'https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=1600&q=80'
+  'https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=1200&q=75'
 
 export function AuthShell({ title, subtitle, children, footer }) {
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
       <div className="flex flex-col justify-center bg-white px-6 py-10 sm:px-10 lg:px-14 xl:px-20">
-        <Link
-          to="/"
-          className="inline-flex w-fit items-center gap-2 text-sm font-semibold text-neutral-500 transition hover:text-brand"
-        >
-          <BackIcon />
-          Volver al inicio
-        </Link>
+        <FadeIn>
+          <Link
+            to="/"
+            className="inline-flex w-fit items-center gap-2 text-sm font-semibold text-neutral-500 transition hover:text-brand"
+          >
+            <BackIcon />
+            Volver al inicio
+          </Link>
+        </FadeIn>
 
         <div className="mx-auto w-full max-w-md lg:mx-0 lg:max-w-none">
-          <h1 className="mt-10 text-3xl font-extrabold tracking-tight text-neutral-950 sm:text-4xl">{title}</h1>
-          {subtitle ? <p className="mt-2 text-base text-neutral-500">{subtitle}</p> : null}
+          <FadeIn delay={80}>
+            <h1 className="mt-10 text-3xl font-extrabold tracking-tight text-neutral-950 sm:text-4xl">{title}</h1>
+            {subtitle ? <p className="mt-2 text-base text-neutral-500">{subtitle}</p> : null}
+          </FadeIn>
 
-          <div className="mt-8">{children}</div>
+          <FadeIn delay={160} className="mt-8">
+            {children}
+          </FadeIn>
 
-          {footer ? <div className="mt-8 text-sm text-neutral-600">{footer}</div> : null}
+          {footer ? (
+            <FadeIn delay={220} className="mt-8 text-sm text-neutral-600">
+              {footer}
+            </FadeIn>
+          ) : null}
         </div>
       </div>
 
       <div className="relative hidden overflow-hidden lg:block">
-        <img src={AUTH_IMAGE} alt="Partido de fútbol en cancha" className="absolute inset-0 h-full w-full object-cover" />
+        <img
+          src={AUTH_IMAGE}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          className="absolute inset-0 h-full w-full object-cover motion-safe:animate-ken-burns"
+        />
         <div className="absolute inset-0 bg-gradient-to-br from-neutral-950/80 via-neutral-950/40 to-brand/30" />
         <div className="pointer-events-none absolute inset-0 bg-hero-mesh opacity-60" />
 
         <div className="relative z-10 flex h-full flex-col justify-between p-12 xl:p-16">
-          <div className="flex justify-end">
+          <FadeIn className="flex justify-end">
             <span className="rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-white/90 backdrop-blur-md">
               Villa del Rosario
             </span>
-          </div>
+          </FadeIn>
 
-          <div className="max-w-md">
+          <FadeIn delay={120} className="max-w-md">
             <p className="text-sm font-bold uppercase tracking-[0.2em] text-brand">Matchear</p>
             <blockquote className="mt-4 text-3xl font-extrabold leading-tight tracking-tight text-white xl:text-4xl">
               Tu próximo partido empieza acá.
@@ -53,7 +70,7 @@ export function AuthShell({ title, subtitle, children, footer }) {
             <p className="mt-4 text-base leading-relaxed text-white/80">
               Reservá canchas, organizá torneos y unite a la comunidad de fútbol más activa de la zona.
             </p>
-          </div>
+          </FadeIn>
         </div>
       </div>
     </div>

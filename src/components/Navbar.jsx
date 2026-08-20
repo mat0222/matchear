@@ -30,24 +30,6 @@ function MenuIcon({ open }) {
   )
 }
 
-function NavPillLink({ to, end, children }) {
-  return (
-    <NavLink
-      to={to}
-      end={end}
-      className={({ isActive }) =>
-        `relative rounded-full px-4 py-2 text-sm font-semibold transition-all duration-200 ${
-          isActive
-            ? 'bg-white text-brand shadow-sm ring-1 ring-neutral-200/80'
-            : 'text-neutral-600 hover:bg-white/70 hover:text-neutral-900'
-        }`
-      }
-    >
-      {children}
-    </NavLink>
-  )
-}
-
 function ChevronDown({ className = '' }) {
   return (
     <svg className={className} viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -60,7 +42,32 @@ function ChevronDown({ className = '' }) {
   )
 }
 
-function NavPillDropdown() {
+function NavItem({ to, end, children }) {
+  return (
+    <NavLink
+      to={to}
+      end={end}
+      className={({ isActive }) =>
+        `relative px-3 py-2 text-[0.8125rem] font-bold uppercase tracking-[0.12em] transition ${
+          isActive ? 'text-brand' : 'text-neutral-700 hover:text-neutral-950'
+        }`
+      }
+    >
+      {({ isActive }) => (
+        <>
+          {children}
+          <span
+            className={`absolute inset-x-3 -bottom-0.5 h-0.5 rounded-full bg-brand transition ${
+              isActive ? 'opacity-100' : 'opacity-0'
+            }`}
+          />
+        </>
+      )}
+    </NavLink>
+  )
+}
+
+function NavDropdown() {
   const { pathname } = useLocation()
   const isActive = COMPLEJO_PATHS.some((path) => pathname === path)
 
@@ -69,18 +76,21 @@ function NavPillDropdown() {
       <button
         type="button"
         aria-haspopup="true"
-        className={`inline-flex items-center gap-0.5 rounded-full px-4 py-2 text-sm font-semibold transition-all duration-200 ${
-          isActive
-            ? 'bg-white text-brand shadow-sm ring-1 ring-neutral-200/80'
-            : 'text-neutral-600 hover:bg-white/70 hover:text-neutral-900'
+        className={`relative inline-flex items-center gap-0.5 px-3 py-2 text-[0.8125rem] font-bold uppercase tracking-[0.12em] transition ${
+          isActive ? 'text-brand' : 'text-neutral-700 hover:text-neutral-950'
         }`}
       >
         El Complejo
         <ChevronDown className="h-4 w-4 opacity-70 transition group-hover:rotate-180" />
+        <span
+          className={`absolute inset-x-3 -bottom-0.5 h-0.5 rounded-full bg-brand transition ${
+            isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-40'
+          }`}
+        />
       </button>
 
-      <div className="invisible absolute left-1/2 top-full z-50 w-52 -translate-x-1/2 pt-2 opacity-0 transition-all duration-200 group-hover:visible group-hover:opacity-100">
-        <div className="overflow-hidden rounded-2xl border border-neutral-200/80 bg-white p-1.5 shadow-lg ring-1 ring-neutral-100">
+      <div className="invisible absolute left-1/2 top-full z-50 w-56 -translate-x-1/2 pt-3 opacity-0 transition-all duration-200 group-hover:visible group-hover:opacity-100">
+        <div className="overflow-hidden rounded-2xl border border-neutral-200 bg-white p-1.5 shadow-xl ring-1 ring-black/5">
           {COMPLEJO_LINKS.map((link) => (
             <NavLink
               key={link.to}
@@ -132,21 +142,19 @@ export function Navbar() {
   const close = () => setOpen(false)
 
   return (
-    <header className="sticky top-0 z-[110] border-b border-neutral-200 bg-white shadow-nav">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-brand/40 to-transparent" />
+    <header className="sticky top-0 z-[110] border-b border-neutral-200 bg-white shadow-nav motion-safe:animate-slide-down">
+      <div className="h-1 w-full bg-gradient-to-r from-brand via-brand-dark to-brand" />
 
       <div className="mx-auto flex h-[4.75rem] max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
         <Logo />
 
-        <nav className="hidden items-center gap-2 lg:flex">
-          <div className="flex rounded-full bg-neutral-100/90 p-1.5 ring-1 ring-neutral-200/60">
-            <NavPillLink to="/" end>
-              Inicio
-            </NavPillLink>
-            <NavPillLink to="/canchas">Canchas</NavPillLink>
-            <NavPillLink to="/torneos">Torneos</NavPillLink>
-            <NavPillDropdown />
-          </div>
+        <nav className="hidden items-center gap-1 lg:flex">
+          <NavItem to="/" end>
+            Inicio
+          </NavItem>
+          <NavItem to="/canchas">Canchas</NavItem>
+          <NavItem to="/torneos">Torneos</NavItem>
+          <NavDropdown />
         </nav>
 
         <div className="hidden items-center gap-3 lg:flex">
@@ -155,7 +163,7 @@ export function Navbar() {
               {user?.role === 'admin' ? (
                 <Link
                   to="/admin"
-                  className="rounded-full px-4 py-2 text-sm font-semibold text-brand transition hover:bg-brand/10"
+                  className="rounded-full px-4 py-2 text-sm font-bold text-brand transition hover:bg-brand/10"
                 >
                   Admin
                 </Link>
@@ -166,13 +174,13 @@ export function Navbar() {
               >
                 Mis reservas
               </Link>
-              <span className="max-w-[8rem] truncate text-sm font-semibold text-neutral-600">
+              <span className="max-w-[8rem] truncate text-sm font-semibold text-neutral-500">
                 {user?.name}
               </span>
               <button
                 type="button"
                 onClick={logout}
-                className="inline-flex items-center gap-2 rounded-full border border-neutral-200 px-4 py-2 text-sm font-semibold text-neutral-700 transition hover:border-brand/30 hover:text-brand"
+                className="inline-flex items-center rounded-full border border-neutral-200 px-4 py-2 text-sm font-semibold text-neutral-700 transition hover:border-brand/40 hover:text-brand"
               >
                 Salir
               </button>
@@ -187,10 +195,10 @@ export function Navbar() {
               </Link>
               <Link
                 to="/registro"
-                className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-brand to-brand-dark px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-brand/30 ring-1 ring-white/25 transition hover:brightness-105 hover:shadow-glow"
+                className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-brand to-brand-dark px-5 py-2.5 text-sm font-extrabold text-white shadow-md shadow-brand/30 transition hover:brightness-105 hover:shadow-glow"
               >
-                Únete
-                <svg className="h-4 w-4 opacity-90" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                Reservá ahora
+                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <path d="M5 12h14M13 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </Link>
@@ -210,7 +218,7 @@ export function Navbar() {
       </div>
 
       {open ? (
-        <div className="fixed inset-0 top-[4.75rem] z-[100] flex flex-col overflow-y-auto bg-white px-6 pb-10 pt-6 lg:hidden">
+        <div className="fixed inset-0 top-[calc(0.25rem+4.75rem)] z-[100] flex flex-col overflow-y-auto bg-white px-6 pb-10 pt-6 lg:hidden">
           <div className="flex flex-col gap-1 rounded-2xl border border-neutral-200 bg-neutral-50 p-2">
             <NavLink
               to="/"
@@ -325,7 +333,7 @@ export function Navbar() {
                   onClick={close}
                   className="rounded-xl bg-gradient-to-r from-brand to-brand-dark py-3.5 text-center text-base font-bold text-white shadow-lg shadow-brand/25"
                 >
-                  Únete gratis
+                  Reservá ahora
                 </Link>
               </>
             )}

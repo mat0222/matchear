@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { PageShell } from '../components/PageShell'
+import { FadeIn } from '../components/FadeIn'
 import { useAuth } from '../auth/AuthProvider'
 import { formatARS } from '../lib/time'
 
@@ -12,7 +13,7 @@ export default function Canchas() {
       <div className="relative overflow-hidden border-b border-neutral-100 bg-white">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(255,75,75,0.12),transparent)]" />
         <div className="relative mx-auto max-w-6xl px-4 py-14 sm:px-6 lg:px-8 lg:py-16">
-          <div className="mx-auto max-w-2xl text-center">
+          <FadeIn className="mx-auto max-w-2xl text-center">
             <p className="text-sm font-bold uppercase tracking-[0.2em] text-brand">Catálogo</p>
             <h1 className="mt-3 text-4xl font-extrabold tracking-tight text-neutral-950 sm:text-5xl">
               Nuestras canchas
@@ -21,12 +22,13 @@ export default function Canchas() {
               Elegí el formato, día, horario y forma de pago. Reservá en minutos.
             </p>
             <div className="mx-auto mt-6 h-1 w-20 rounded-full bg-gradient-to-r from-brand to-brand-dark" />
-          </div>
+          </FadeIn>
 
           <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {courts.map((c) => (
-              <article
+            {courts.map((c, i) => (
+              <FadeIn
                 key={c.id}
+                delay={100 + i * 80}
                 className="group flex flex-col overflow-hidden rounded-3xl border border-neutral-100 bg-white shadow-card transition duration-300 hover:-translate-y-1 hover:border-brand/20 hover:shadow-card-hover"
               >
                 <div className="relative overflow-hidden bg-gradient-to-br from-brand-dark via-brand to-brand px-4 py-12 text-center text-white">
@@ -50,7 +52,7 @@ export default function Canchas() {
                     </svg>
                   </Link>
                 </div>
-              </article>
+              </FadeIn>
             ))}
           </div>
         </div>
