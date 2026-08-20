@@ -4,10 +4,10 @@ import { PageShell } from '../components/PageShell'
 import { PageHeader } from '../components/PageHeader'
 import { Countdown } from '../components/Countdown'
 import { useAuth } from '../auth/AuthProvider'
-import { inputClass, labelClass } from '../lib/form'
+import { validateWhatsapp } from '../lib/security'
 import { buildHourlySlots } from '../lib/slots'
 import { addDays, formatARS, isoDay, prettyDay } from '../lib/time'
-import { openBlankTab, openWhatsappToOwner } from '../lib/whatsapp'
+import { isMobileDevice, openBlankTab, openWhatsappToOwner } from '../lib/whatsapp'
 
 const SLOTS = buildHourlySlots({ startHour: 9, endHour: 22 })
 
@@ -74,7 +74,30 @@ export default function PitchDetail() {
     }
 
     setSubmitting(true)
-    const popup = openBlankTab()
+
+    const mobile = isMobileDevice()
+    if (mobile && !validateWhatsapp(whatsapp)) {
+      setErrorMessage('Ingresá un número de WhatsApp válido con código de área.')
+      setStatus('err')
+      setSubmitting(false)
+      return
+    }
+
+    const waPayload = {
+      pitchName: pitch.name,
+      date: day,
+      slot,
+      paymentMethod: method,
+      customerWhatsapp: whatsapp,
+      status: 'confirmed',
+    }
+    const popup = mobile ? null : openBlankTab()
+
+    if (mobile) {
+      const url = openWhatsappToOwner(waPayload, null)
+      setConfirmationUrl(url)
+    }
+
     try {
       const res = await createBookingAndPayment({
         pitchId: pitch.id,
@@ -96,24 +119,18 @@ export default function PitchDetail() {
               ? res.message || 'Límite de reservas alcanzado. Probá más tarde.'
               : res.error === 'INVALID_SLOT'
                 ? 'Día u horario inválido.'
-                : 'No se pudo reservar. El horario puede haber sido ocupado.',
+                : mobile
+                  ? 'No se pudo reservar. Si ya enviaste el mensaje por WhatsApp, avisá al complejo que el turno no quedó registrado.'
+                  : 'No se pudo reservar. El horario puede haber sido ocupado.',
         )
         setStatus('err')
         return
       }
 
-      const url = openWhatsappToOwner(
-        {
-          pitchName: pitch.name,
-          date: day,
-          slot,
-          paymentMethod: method,
-          customerWhatsapp: whatsapp,
-          status: 'confirmed',
-        },
-        popup,
-      )
-      setConfirmationUrl(url)
+      if (!mobile) {
+        const url = openWhatsappToOwner(waPayload, popup)
+        setConfirmationUrl(url)
+      }
 
       if (payMode === 'deposit') {
         setPending({ paymentId: res.paymentId, expiresAt: res.expiresAt })
@@ -360,17 +377,20 @@ export default function PitchDetail() {
                   >
                     Pagar seña ahora
                   </button>
+                  <p className="mt-3 text-[11px] text-neutral-600">
+                    Se abrió WhatsApp para avisar al complejo. Enviá el mensaje y pagá la seña acá.
+                  </p>
                   {confirmationUrl ? (
                     <a
                       href={confirmationUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="mt-3 block rounded-xl bg-[#25D366] px-4 py-2.5 text-center text-xs font-extrabold text-white"
+                      className="mt-2 inline-block text-[11px] font-semibold text-brand hover:underline"
                     >
-                      Avisar por WhatsApp
+                      ¿No se abrió WhatsApp? Tocá acá
                     </a>
                   ) : (
-                    <p className="mt-3 text-[11px] font-medium text-amber-800">
+                    <p className="mt-2 text-[11px] font-medium text-amber-800">
                       WhatsApp no está configurado en el servidor. Agregá VITE_WHATSAPP_OWNER en Netlify y volvé a desplegar.
                     </p>
                   )}
@@ -381,16 +401,16 @@ export default function PitchDetail() {
               {status === 'ok' ? (
                 <div className="mt-4 space-y-3">
                   <p className="rounded-xl bg-emerald-50 p-3 text-xs font-semibold text-emerald-700">
-                    ¡Reserva confirmada!
+                    ¡Reserva confirmada! Se abrió WhatsApp para avisar al complejo.
                   </p>
                   {confirmationUrl ? (
                     <a
                       href={confirmationUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="block rounded-xl bg-[#25D366] px-4 py-2.5 text-center text-xs font-extrabold text-white"
+                      className="inline-block text-xs font-semibold text-brand hover:underline"
                     >
-                      Avisar por WhatsApp
+                      ¿No se abrió WhatsApp? Tocá acá
                     </a>
                   ) : (
                     <p className="text-[11px] font-medium text-amber-800">

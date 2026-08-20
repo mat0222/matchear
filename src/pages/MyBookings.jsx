@@ -5,7 +5,7 @@ import { PageHeader } from '../components/PageHeader'
 import { Countdown } from '../components/Countdown'
 import { useAuth } from '../auth/AuthProvider'
 import { formatARS } from '../lib/time'
-import { openBlankTab, openWhatsappToOwner } from '../lib/whatsapp'
+import { buildBookingMessage, isMobileDevice, openBlankTab, openWhatsappToOwner, whatsappOwnerUrl } from '../lib/whatsapp'
 
 function statusLabel(b) {
   if (b.status === 'pending_payment') return 'Pendiente de pago'
@@ -26,7 +26,21 @@ export default function MyBookings() {
     )
     if (!confirmed) return
 
-    const popup = openBlankTab()
+    const waPayload = {
+      pitchName: booking.pitch?.name || 'la cancha',
+      date: booking.date,
+      slot: booking.slot,
+      paymentMethod: booking.paymentMethod,
+      customerWhatsapp: booking.whatsapp,
+      status: 'cancelled',
+    }
+    const mobile = isMobileDevice()
+    const popup = mobile ? null : openBlankTab()
+
+    if (mobile) {
+      openWhatsappToOwner(waPayload, null)
+    }
+
     const result = await cancelBooking({ bookingId: booking.id })
     if (!result.ok) {
       try {
@@ -38,22 +52,14 @@ export default function MyBookings() {
       return
     }
 
-    const whatsappUrl = openWhatsappToOwner(
-      {
-        pitchName: booking.pitch?.name || 'la cancha',
-        date: booking.date,
-        slot: booking.slot,
-        paymentMethod: booking.paymentMethod,
-        customerWhatsapp: booking.whatsapp,
-        status: 'cancelled',
-      },
-      popup,
-    )
+    const whatsappUrl = mobile
+      ? whatsappOwnerUrl(buildBookingMessage(waPayload))
+      : openWhatsappToOwner(waPayload, popup)
 
     setNotice({
       type: 'success',
       text: whatsappUrl
-        ? 'Turno cancelado. Tocá el botón verde si WhatsApp no se abrió solo.'
+        ? 'Turno cancelado. Se abrió WhatsApp para avisar al complejo.'
         : 'Turno cancelado. WhatsApp no está configurado en el servidor (VITE_WHATSAPP_OWNER).',
       whatsappUrl,
     })

@@ -12,6 +12,10 @@ export function isOwnerWhatsappConfigured() {
   return OWNER_WHATSAPP.length >= 10
 }
 
+export function isMobileDevice() {
+  return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
+}
+
 function formatDayLabel(iso) {
   if (!iso) return '—'
   const [y, m, d] = iso.split('-')
@@ -93,19 +97,44 @@ export function buildFixedSlotMessage({ name, phone, day, hour, format, period, 
   )
 }
 
-/** Abre la app de WhatsApp. `popup` se cierra: el protocolo nativo no usa pestaña nueva. */
+function triggerExternalNavigation(url) {
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.target = '_blank'
+  anchor.rel = 'noopener noreferrer'
+  document.body.appendChild(anchor)
+  anchor.click()
+  anchor.remove()
+}
+
+/** Abre WhatsApp. En celular usa el protocolo nativo sin salir de la página. */
 export function openWhatsappMessageToOwner(message, popup) {
+  const appUrl = whatsappAppUrl(message)
+  const webUrl = whatsappOwnerUrl(message)
+  if (!appUrl) return null
+
   try {
     popup?.close()
   } catch {
     /* ignore */
   }
 
-  const appUrl = whatsappAppUrl(message)
-  if (!appUrl) return null
+  if (isMobileDevice()) {
+    triggerExternalNavigation(appUrl)
+    return webUrl
+  }
 
-  window.location.href = appUrl
-  return whatsappOwnerUrl(message)
+  const tab = popup ?? window.open('about:blank', '_blank')
+  if (tab) {
+    try {
+      tab.location.href = webUrl
+    } catch {
+      window.open(webUrl, '_blank')
+    }
+  } else {
+    window.open(webUrl, '_blank')
+  }
+  return webUrl
 }
 
 export function openWhatsappToOwner(payload, popup) {
