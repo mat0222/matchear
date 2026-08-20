@@ -102,6 +102,9 @@ export default function PitchDetail() {
       customerWhatsapp: whatsapp,
       status: 'confirmed',
     }
+    const url = openWhatsappToOwner(waPayload)
+    setConfirmationUrl(url)
+
     try {
       const res = await createBookingAndPayment({
         pitchId: pitch.id,
@@ -118,14 +121,11 @@ export default function PitchDetail() {
               ? res.message || 'Límite de reservas alcanzado. Probá más tarde.'
               : res.error === 'INVALID_SLOT'
                 ? 'Día u horario inválido.'
-                : 'No se pudo reservar. El horario puede haber sido ocupado.',
+                : 'No se pudo reservar. Si ya enviaste el mensaje por WhatsApp, el turno puede no haber quedado registrado.',
         )
         setStatus('err')
         return
       }
-
-      const url = openWhatsappToOwner(waPayload)
-      setConfirmationUrl(url)
 
       if (payMode === 'deposit') {
         setPending({ paymentId: res.paymentId, expiresAt: res.expiresAt })

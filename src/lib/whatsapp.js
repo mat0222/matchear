@@ -89,15 +89,26 @@ export function buildFixedSlotMessage({ name, phone, day, hour, format, period, 
   )
 }
 
-/** Abre wa.me directo con el mensaje ya escrito. */
-export function openWhatsappMessageToOwner(message) {
+/** Abre wa.me directo con el mensaje ya escrito (debe llamarse en el mismo clic del usuario). */
+export function openWhatsappMessageToOwner(message, { sameTabFallback = false } = {}) {
   const webUrl = whatsappOwnerUrl(message)
   if (!webUrl) return null
 
-  const opened = window.open(webUrl, '_blank', 'noopener,noreferrer')
-  if (!opened && isMobileDevice()) {
-    window.location.href = webUrl
+  let opened = window.open(webUrl, '_blank', 'noopener,noreferrer')
+  if (!opened) {
+    const link = document.createElement('a')
+    link.href = webUrl
+    link.target = '_blank'
+    link.rel = 'noopener noreferrer'
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
   }
+
+  if (sameTabFallback && isMobileDevice()) {
+    window.location.assign(webUrl)
+  }
+
   return webUrl
 }
 

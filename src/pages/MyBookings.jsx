@@ -37,14 +37,19 @@ export default function MyBookings() {
     setConfirmId(null)
     setCancellingId(booking.id)
 
+    const whatsappUrl = openWhatsappToOwner(waPayload)
+
     try {
       const result = await cancelBooking({ bookingId: booking.id })
       if (!result.ok) {
-        setNotice({ type: 'error', text: 'No se pudo cancelar el turno.' })
+        setNotice({
+          type: 'error',
+          text: 'No se pudo cancelar el turno en la web. Si ya enviaste el mensaje por WhatsApp, avisá al complejo.',
+          whatsappUrl,
+        })
         return
       }
 
-      const whatsappUrl = openWhatsappToOwner(waPayload)
       setNotice({
         type: 'success',
         text: whatsappUrl
@@ -82,7 +87,7 @@ export default function MyBookings() {
                 rel="noopener noreferrer"
                 className="mt-3 inline-flex rounded-xl bg-[#25D366] px-4 py-2.5 text-xs font-extrabold text-white"
               >
-                Avisar cancelación por WhatsApp
+                {notice.type === 'error' ? 'Abrir WhatsApp' : 'Avisar cancelación por WhatsApp'}
               </a>
             ) : null}
           </div>
