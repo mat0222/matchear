@@ -8,7 +8,7 @@ import { validateWhatsapp } from '../lib/security'
 import { inputClass, labelClass } from '../lib/form'
 import { buildHourlySlots } from '../lib/slots'
 import { addDays, formatARS, isoDay, prettyDay } from '../lib/time'
-import { openBlankTab, openWhatsappToOwner } from '../lib/whatsapp'
+import { openWhatsappToOwner } from '../lib/whatsapp'
 
 const SLOTS = buildHourlySlots({ startHour: 9, endHour: 22 })
 
@@ -102,8 +102,6 @@ export default function PitchDetail() {
       customerWhatsapp: whatsapp,
       status: 'confirmed',
     }
-    const popup = openBlankTab()
-
     try {
       const res = await createBookingAndPayment({
         pitchId: pitch.id,
@@ -113,11 +111,6 @@ export default function PitchDetail() {
         paymentMethod: { method, mode: payMode },
       })
       if (!res.ok) {
-        try {
-          popup?.close()
-        } catch {
-          /* ignore */
-        }
         setErrorMessage(
           res.error === 'INVALID_WHATSAPP'
             ? 'Ingresá un número de WhatsApp válido con código de área.'
@@ -131,7 +124,7 @@ export default function PitchDetail() {
         return
       }
 
-      const url = openWhatsappToOwner(waPayload, popup)
+      const url = openWhatsappToOwner(waPayload)
       setConfirmationUrl(url)
 
       if (payMode === 'deposit') {

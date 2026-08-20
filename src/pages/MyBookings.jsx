@@ -5,7 +5,7 @@ import { PageHeader } from '../components/PageHeader'
 import { Countdown } from '../components/Countdown'
 import { useAuth } from '../auth/AuthProvider'
 import { formatARS } from '../lib/time'
-import { openBlankTab, openWhatsappToOwner } from '../lib/whatsapp'
+import { openWhatsappToOwner } from '../lib/whatsapp'
 
 function statusLabel(b) {
   if (b.status === 'pending_payment') return 'Pendiente de pago'
@@ -36,21 +36,15 @@ export default function MyBookings() {
 
     setConfirmId(null)
     setCancellingId(booking.id)
-    const popup = openBlankTab()
 
     try {
       const result = await cancelBooking({ bookingId: booking.id })
       if (!result.ok) {
-        try {
-          popup?.close()
-        } catch {
-          /* ignore */
-        }
         setNotice({ type: 'error', text: 'No se pudo cancelar el turno.' })
         return
       }
 
-      const whatsappUrl = openWhatsappToOwner(waPayload, popup)
+      const whatsappUrl = openWhatsappToOwner(waPayload)
       setNotice({
         type: 'success',
         text: whatsappUrl

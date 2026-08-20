@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { PageShell } from '../components/PageShell'
 import { PageHeader } from '../components/PageHeader'
 import { inputClass, labelClass, selectClass, textareaClass } from '../lib/form'
-import { openBlankTab, openWhatsappFixedSlotRequest } from '../lib/whatsapp'
+import { openWhatsappFixedSlotRequest } from '../lib/whatsapp'
 
 const benefits = [
   {
@@ -37,8 +37,7 @@ export default function TurnosFijos() {
     e.preventDefault()
     const data = new FormData(e.currentTarget)
 
-    const popup = openBlankTab()
-    const url = openWhatsappFixedSlotRequest(
+    openWhatsappFixedSlotRequest(
       {
         name: String(data.get('name') || '').trim(),
         phone: String(data.get('phone') || '').trim(),
@@ -48,15 +47,7 @@ export default function TurnosFijos() {
         period: String(data.get('period') || ''),
         notes: String(data.get('notes') || ''),
       },
-      popup,
     )
-    if (!url) {
-      try {
-        popup?.close()
-      } catch {
-        /* ignore */
-      }
-    }
 
     setSent(true)
   }

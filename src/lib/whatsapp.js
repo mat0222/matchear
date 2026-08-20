@@ -89,39 +89,22 @@ export function buildFixedSlotMessage({ name, phone, day, hour, format, period, 
   )
 }
 
-/** Abre wa.me en pestaña nueva (popup preparado en el mismo clic del usuario). */
-export function openWhatsappMessageToOwner(message, popup) {
+/** Abre wa.me directo con el mensaje ya escrito. */
+export function openWhatsappMessageToOwner(message) {
   const webUrl = whatsappOwnerUrl(message)
   if (!webUrl) return null
 
-  if (popup && !popup.closed) {
-    try {
-      popup.location.href = webUrl
-      return webUrl
-    } catch {
-      /* ignore */
-    }
-  }
-
-  const tab = window.open(webUrl, '_blank')
-  if (!tab && isMobileDevice()) {
+  const opened = window.open(webUrl, '_blank', 'noopener,noreferrer')
+  if (!opened && isMobileDevice()) {
     window.location.href = webUrl
   }
   return webUrl
 }
 
-export function openWhatsappToOwner(payload, popup) {
-  return openWhatsappMessageToOwner(buildBookingMessage(payload), popup)
+export function openWhatsappToOwner(payload) {
+  return openWhatsappMessageToOwner(buildBookingMessage(payload))
 }
 
-export function openWhatsappFixedSlotRequest(payload, popup) {
-  return openWhatsappMessageToOwner(buildFixedSlotMessage(payload), popup)
-}
-
-export function openBlankTab() {
-  try {
-    return window.open('about:blank', '_blank')
-  } catch {
-    return null
-  }
+export function openWhatsappFixedSlotRequest(payload) {
+  return openWhatsappMessageToOwner(buildFixedSlotMessage(payload))
 }
