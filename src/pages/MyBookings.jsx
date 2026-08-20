@@ -5,7 +5,7 @@ import { PageHeader } from '../components/PageHeader'
 import { Countdown } from '../components/Countdown'
 import { useAuth } from '../auth/AuthProvider'
 import { formatARS } from '../lib/time'
-import { openWhatsappToOwner } from '../lib/whatsapp'
+import { openBlankTab, openWhatsappToOwner } from '../lib/whatsapp'
 
 function statusLabel(b) {
   if (b.status === 'pending_payment') return 'Pendiente de pago'
@@ -26,24 +26,35 @@ export default function MyBookings() {
     )
     if (!confirmed) return
 
+    const popup = openBlankTab()
     const result = await cancelBooking({ bookingId: booking.id })
     if (!result.ok) {
+      try {
+        popup?.close()
+      } catch {
+        /* ignore */
+      }
       setNotice({ type: 'error', text: 'No se pudo cancelar el turno.' })
       return
     }
 
-    const whatsappUrl = openWhatsappToOwner({
-      pitchName: booking.pitch?.name || 'la cancha',
-      date: booking.date,
-      slot: booking.slot,
-      paymentMethod: booking.paymentMethod,
-      customerWhatsapp: booking.whatsapp,
-      status: 'cancelled',
-    })
+    const whatsappUrl = openWhatsappToOwner(
+      {
+        pitchName: booking.pitch?.name || 'la cancha',
+        date: booking.date,
+        slot: booking.slot,
+        paymentMethod: booking.paymentMethod,
+        customerWhatsapp: booking.whatsapp,
+        status: 'cancelled',
+      },
+      popup,
+    )
 
     setNotice({
       type: 'success',
-      text: 'Turno cancelado. El horario volvió a quedar disponible. Se abrió WhatsApp para avisar al complejo.',
+      text: whatsappUrl
+        ? 'Turno cancelado. Tocá el botón verde si WhatsApp no se abrió solo.'
+        : 'Turno cancelado. WhatsApp no está configurado en el servidor (VITE_WHATSAPP_OWNER).',
       whatsappUrl,
     })
   }

@@ -84,21 +84,40 @@ export function buildFixedSlotMessage({ name, phone, day, hour, format, period, 
   )
 }
 
-/** Abre WhatsApp (app o Web) en una nueva pestaña hacia el dueño */
-export function openWhatsappMessageToOwner(message) {
+/** Abre WhatsApp. `popup` debe crearse en el mismo clic (antes de await) para no ser bloqueado. */
+export function openWhatsappMessageToOwner(message, popup) {
   const url = whatsappOwnerUrl(message)
   if (!url) {
-    console.warn('VITE_WHATSAPP_OWNER no configurado')
+    try {
+      popup?.close()
+    } catch {
+      /* ignore */
+    }
     return null
   }
-  window.open(url, '_blank', 'noopener,noreferrer')
+
+  if (popup && !popup.closed) {
+    popup.location.replace(url)
+    return url
+  }
+
+  window.open(url, '_blank')
   return url
 }
 
-export function openWhatsappToOwner(payload) {
-  return openWhatsappMessageToOwner(buildBookingMessage(payload))
+export function openWhatsappToOwner(payload, popup) {
+  return openWhatsappMessageToOwner(buildBookingMessage(payload), popup)
 }
 
-export function openWhatsappFixedSlotRequest(payload) {
-  return openWhatsappMessageToOwner(buildFixedSlotMessage(payload))
+export function openWhatsappFixedSlotRequest(payload, popup) {
+  return openWhatsappMessageToOwner(buildFixedSlotMessage(payload), popup)
+}
+
+/** Abrí una pestaña vacía en el mismo clic del usuario (anti bloqueo de popups). */
+export function openBlankTab() {
+  try {
+    return window.open('about:blank', '_blank')
+  } catch {
+    return null
+  }
 }

@@ -18,7 +18,7 @@ Marcá **All scopes** / Production + Deploy previews + Branch deploys.
 | `VITE_FIREBASE_STORAGE_BUCKET` | bucket de Storage |
 | `VITE_FIREBASE_MESSAGING_SENDER_ID` | sender id |
 | `VITE_FIREBASE_APP_ID` | app id web |
-| `VITE_WHATSAPP_OWNER` | `.env` local (avisos WhatsApp) |
+| `VITE_WHATSAPP_OWNER` | **Obligatoria** para avisos de reserva. Código de país + número, sin + ni espacios |
 | `VITE_ADMIN_EMAIL` | `.env` local (cuenta admin) |
 
 Sin espacios al inicio/final. Los nombres tienen que empezar con `VITE_`.

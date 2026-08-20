@@ -7,7 +7,7 @@ import { useAuth } from '../auth/AuthProvider'
 import { inputClass, labelClass } from '../lib/form'
 import { buildHourlySlots } from '../lib/slots'
 import { addDays, formatARS, isoDay, prettyDay } from '../lib/time'
-import { openWhatsappToOwner } from '../lib/whatsapp'
+import { openBlankTab, openWhatsappToOwner } from '../lib/whatsapp'
 
 const SLOTS = buildHourlySlots({ startHour: 9, endHour: 22 })
 
@@ -74,6 +74,7 @@ export default function PitchDetail() {
     }
 
     setSubmitting(true)
+    const popup = openBlankTab()
     try {
       const res = await createBookingAndPayment({
         pitchId: pitch.id,
@@ -83,6 +84,11 @@ export default function PitchDetail() {
         paymentMethod: { method, mode: payMode },
       })
       if (!res.ok) {
+        try {
+          popup?.close()
+        } catch {
+          /* ignore */
+        }
         setErrorMessage(
           res.error === 'INVALID_WHATSAPP'
             ? 'Ingresá un número de WhatsApp válido con código de área.'
@@ -96,14 +102,17 @@ export default function PitchDetail() {
         return
       }
 
-      const url = openWhatsappToOwner({
-        pitchName: pitch.name,
-        date: day,
-        slot,
-        paymentMethod: method,
-        customerWhatsapp: whatsapp,
-        status: 'confirmed',
-      })
+      const url = openWhatsappToOwner(
+        {
+          pitchName: pitch.name,
+          date: day,
+          slot,
+          paymentMethod: method,
+          customerWhatsapp: whatsapp,
+          status: 'confirmed',
+        },
+        popup,
+      )
       setConfirmationUrl(url)
 
       if (payMode === 'deposit') {
@@ -351,6 +360,20 @@ export default function PitchDetail() {
                   >
                     Pagar seña ahora
                   </button>
+                  {confirmationUrl ? (
+                    <a
+                      href={confirmationUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-3 block rounded-xl bg-[#25D366] px-4 py-2.5 text-center text-xs font-extrabold text-white"
+                    >
+                      Avisar por WhatsApp
+                    </a>
+                  ) : (
+                    <p className="mt-3 text-[11px] font-medium text-amber-800">
+                      WhatsApp no está configurado en el servidor. Agregá VITE_WHATSAPP_OWNER en Netlify y volvé a desplegar.
+                    </p>
+                  )}
                   <p className="mt-2 text-[11px] text-neutral-600">Ventana de pago: {holdMinutes} min.</p>
                 </div>
               ) : null}
@@ -367,9 +390,13 @@ export default function PitchDetail() {
                       rel="noopener noreferrer"
                       className="block rounded-xl bg-[#25D366] px-4 py-2.5 text-center text-xs font-extrabold text-white"
                     >
-                      Si no se abrió, tocá acá para avisar por WhatsApp
+                      Avisar por WhatsApp
                     </a>
-                  ) : null}
+                  ) : (
+                    <p className="text-[11px] font-medium text-amber-800">
+                      WhatsApp no está configurado en el servidor. Agregá VITE_WHATSAPP_OWNER en Netlify y volvé a desplegar.
+                    </p>
+                  )}
                   <Link
                     to="/mis-reservas"
                     className="block text-center text-sm font-bold text-brand hover:underline"
