@@ -61,12 +61,6 @@ function ownerDigits(phone = OWNER_WHATSAPP) {
   return digits.length >= 10 ? digits : null
 }
 
-export function whatsappAppUrl(message, phone = OWNER_WHATSAPP) {
-  const digits = ownerDigits(phone)
-  if (!digits) return null
-  return `whatsapp://send?phone=${digits}&text=${encodeURIComponent(message)}`
-}
-
 export function whatsappOwnerUrl(message, phone = OWNER_WHATSAPP) {
   const digits = ownerDigits(phone)
   if (!digits) return null
@@ -95,33 +89,12 @@ export function buildFixedSlotMessage({ name, phone, day, hour, format, period, 
   )
 }
 
-/** Abre WhatsApp en celular sin pestaña en blanco ni salir de la página. */
-function openWhatsappOnMobile(appUrl) {
-  const iframe = document.createElement('iframe')
-  iframe.setAttribute('aria-hidden', 'true')
-  iframe.style.cssText = 'position:fixed;width:0;height:0;border:0;opacity:0;pointer-events:none'
-  iframe.src = appUrl
-  document.body.appendChild(iframe)
-  window.setTimeout(() => iframe.remove(), 2500)
-}
-
+/** Abre wa.me en pestaña nueva (popup preparado en el mismo clic del usuario). */
 export function openWhatsappMessageToOwner(message, popup) {
-  const appUrl = whatsappAppUrl(message)
   const webUrl = whatsappOwnerUrl(message)
-  if (!appUrl) return null
+  if (!webUrl) return null
 
-  try {
-    popup?.close()
-  } catch {
-    /* ignore */
-  }
-
-  if (isMobileDevice()) {
-    openWhatsappOnMobile(appUrl)
-    return webUrl
-  }
-
-  const tab = popup ?? window.open('about:blank', '_blank')
+  const tab = popup && !popup.closed ? popup : window.open(webUrl, '_blank')
   if (tab) {
     try {
       tab.location.href = webUrl

@@ -5,8 +5,7 @@ import { inputClass, labelClass, textareaClass } from '../lib/form'
 import { OWNER_WHATSAPP, isOwnerWhatsappConfigured } from '../lib/whatsapp'
 
 const address = 'Av. San Martín 1250, Villa del Rosario, Córdoba'
-const mapEmbedSrc =
-  'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3406.5!2d-63.54!3d-31.56!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMzHCsDMzJzM2LjAiUyA2M8KwMzInMjQuMCJX!5e0!3m2!1ses!2sar!4v1700000000000!5m2!1ses!2sar'
+const mapsHref = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`
 
 const hours = [
   { day: 'Lunes a viernes', time: '08:00 – 23:00 hs' },
@@ -45,21 +44,26 @@ export default function Contacto() {
       <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
         <div className="grid gap-8 lg:grid-cols-2">
           <div className="space-y-6">
-            <div className="overflow-hidden rounded-3xl border border-neutral-100 shadow-card">
-              <iframe
-                title="Ubicación de Matchear en Villa del Rosario"
-                src={mapEmbedSrc}
-                className="h-64 w-full border-0 sm:h-80"
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-              />
-            </div>
+            <a
+              href={mapsHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block overflow-hidden rounded-3xl border border-neutral-100 shadow-card transition hover:border-brand/30 hover:shadow-card-hover"
+            >
+              <div className="flex h-64 flex-col items-center justify-center gap-3 bg-gradient-to-br from-brand-muted to-white px-6 text-center sm:h-80">
+                <svg className="h-12 w-12 text-brand" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                  <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z" />
+                </svg>
+                <p className="text-sm font-extrabold text-neutral-950">Ver ubicación en Google Maps</p>
+                <p className="text-xs text-neutral-600">{address}</p>
+              </div>
+            </a>
 
             <div className="rounded-3xl border border-neutral-100 bg-white p-6 shadow-card">
               <h2 className="text-lg font-extrabold text-neutral-950">Dirección</h2>
               <p className="mt-2 text-sm text-neutral-600">{address}</p>
               <a
-                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`}
+                href={mapsHref}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="mt-3 inline-flex text-sm font-bold text-brand hover:underline"

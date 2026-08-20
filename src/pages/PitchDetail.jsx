@@ -8,7 +8,7 @@ import { validateWhatsapp } from '../lib/security'
 import { inputClass, labelClass } from '../lib/form'
 import { buildHourlySlots } from '../lib/slots'
 import { addDays, formatARS, isoDay, prettyDay } from '../lib/time'
-import { isMobileDevice, openBlankTab, openWhatsappToOwner } from '../lib/whatsapp'
+import { openBlankTab, openWhatsappToOwner } from '../lib/whatsapp'
 
 const SLOTS = buildHourlySlots({ startHour: 9, endHour: 22 })
 
@@ -26,7 +26,6 @@ export default function PitchDetail() {
     isAuthed,
     createBookingAndPayment,
     listAvailability,
-    watchAvailability,
     refreshAvailability,
     payDeposit,
     settings,
@@ -51,25 +50,20 @@ export default function PitchDetail() {
   )
 
   useEffect(() => {
-    if (!pitch?.id) return undefined
+    if (!pitch?.id || !refreshAvailability) return undefined
 
-    if (isMobileDevice() && refreshAvailability) {
-      let cancelled = false
-      const load = () =>
-        refreshAvailability(pitch.id, day).then(() => {
-          if (!cancelled) setAvailTick((n) => n + 1)
-        })
-      load()
-      const interval = window.setInterval(load, 45000)
-      return () => {
-        cancelled = true
-        window.clearInterval(interval)
-      }
+    let cancelled = false
+    const load = () =>
+      refreshAvailability(pitch.id, day).then(() => {
+        if (!cancelled) setAvailTick((n) => n + 1)
+      })
+    load()
+    const interval = window.setInterval(load, 30000)
+    return () => {
+      cancelled = true
+      window.clearInterval(interval)
     }
-
-    if (!watchAvailability) return undefined
-    return watchAvailability(pitch.id, day, () => setAvailTick((n) => n + 1))
-  }, [pitch?.id, day, watchAvailability, refreshAvailability])
+  }, [pitch?.id, day, refreshAvailability])
 
   const availability = pitch
     ? listAvailability({ pitchId: pitch.id, date: day, slots: SLOTS })
@@ -93,8 +87,7 @@ export default function PitchDetail() {
 
     setSubmitting(true)
 
-    const mobile = isMobileDevice()
-    if (mobile && !validateWhatsapp(whatsapp)) {
+    if (!validateWhatsapp(whatsapp)) {
       setErrorMessage('Ingresá un número de WhatsApp válido con código de área.')
       setStatus('err')
       setSubmitting(false)
@@ -109,12 +102,7 @@ export default function PitchDetail() {
       customerWhatsapp: whatsapp,
       status: 'confirmed',
     }
-    const popup = mobile ? null : openBlankTab()
-
-    if (mobile) {
-      const url = openWhatsappToOwner(waPayload, null)
-      setConfirmationUrl(url)
-    }
+    const popup = openBlankTab()
 
     try {
       const res = await createBookingAndPayment({
@@ -137,18 +125,14 @@ export default function PitchDetail() {
               ? res.message || 'Límite de reservas alcanzado. Probá más tarde.'
               : res.error === 'INVALID_SLOT'
                 ? 'Día u horario inválido.'
-                : mobile
-                  ? 'No se pudo reservar. Si ya enviaste el mensaje por WhatsApp, avisá al complejo que el turno no quedó registrado.'
-                  : 'No se pudo reservar. El horario puede haber sido ocupado.',
+                : 'No se pudo reservar. El horario puede haber sido ocupado.',
         )
         setStatus('err')
         return
       }
 
-      if (!mobile) {
-        const url = openWhatsappToOwner(waPayload, popup)
-        setConfirmationUrl(url)
-      }
+      const url = openWhatsappToOwner(waPayload, popup)
+      setConfirmationUrl(url)
 
       if (payMode === 'deposit') {
         setPending({ paymentId: res.paymentId, expiresAt: res.expiresAt })

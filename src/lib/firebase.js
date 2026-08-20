@@ -1,6 +1,6 @@
 import { initializeApp, getApps } from 'firebase/app'
 import { getAuth } from 'firebase/auth'
-import { getFirestore } from 'firebase/firestore'
+import { getFirestore, initializeFirestore } from 'firebase/firestore'
 import { ADMIN_EMAIL, isFirebaseConfigured } from './firebaseConfig.js'
 
 export { ADMIN_EMAIL, isFirebaseConfigured }
@@ -21,7 +21,11 @@ let db = null
 if (isFirebaseConfigured) {
   app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig)
   auth = getAuth(app)
-  db = getFirestore(app)
+  try {
+    db = initializeFirestore(app, { experimentalForceLongPolling: true })
+  } catch {
+    db = getFirestore(app)
+  }
 }
 
 export { app, auth, db }

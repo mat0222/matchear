@@ -5,7 +5,7 @@ import { PageHeader } from '../components/PageHeader'
 import { Countdown } from '../components/Countdown'
 import { useAuth } from '../auth/AuthProvider'
 import { formatARS } from '../lib/time'
-import { buildBookingMessage, isMobileDevice, openBlankTab, openWhatsappToOwner, whatsappOwnerUrl } from '../lib/whatsapp'
+import { openBlankTab, openWhatsappToOwner } from '../lib/whatsapp'
 
 function statusLabel(b) {
   if (b.status === 'pending_payment') return 'Pendiente de pago'
@@ -34,12 +34,7 @@ export default function MyBookings() {
       customerWhatsapp: booking.whatsapp,
       status: 'cancelled',
     }
-    const mobile = isMobileDevice()
-    const popup = mobile ? null : openBlankTab()
-
-    if (mobile) {
-      openWhatsappToOwner(waPayload, null)
-    }
+    const popup = openBlankTab()
 
     const result = await cancelBooking({ bookingId: booking.id })
     if (!result.ok) {
@@ -52,9 +47,7 @@ export default function MyBookings() {
       return
     }
 
-    const whatsappUrl = mobile
-      ? whatsappOwnerUrl(buildBookingMessage(waPayload))
-      : openWhatsappToOwner(waPayload, popup)
+    const whatsappUrl = openWhatsappToOwner(waPayload, popup)
 
     setNotice({
       type: 'success',
