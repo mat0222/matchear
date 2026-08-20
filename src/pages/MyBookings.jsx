@@ -5,7 +5,7 @@ import { PageHeader } from '../components/PageHeader'
 import { Countdown } from '../components/Countdown'
 import { useAuth } from '../auth/AuthProvider'
 import { formatARS } from '../lib/time'
-import { buildBookingMessage, openBlankTab, openWhatsappMessageToOwner, whatsappOwnerUrl } from '../lib/whatsapp'
+import { openBlankTab, openWhatsappToOwner } from '../lib/whatsapp'
 
 function statusLabel(b) {
   if (b.status === 'pending_payment') return 'Pendiente de pago'
@@ -18,9 +18,13 @@ function statusLabel(b) {
 export default function MyBookings() {
   const { myBookings, payDeposit, cancelBooking } = useAuth()
   const [notice, setNotice] = useState(null)
+  const [confirmId, setConfirmId] = useState(null)
+  const [cancellingId, setCancellingId] = useState(null)
   const bookings = myBookings()
 
-  async function handleCancel(booking) {
+  async function handleCancelConfirm(booking) {
+    if (cancellingId) return
+
     const waPayload = {
       pitchName: booking.pitch?.name || 'la cancha',
       date: booking.date,
@@ -29,44 +33,34 @@ export default function MyBookings() {
       customerWhatsapp: booking.whatsapp,
       status: 'cancelled',
     }
-    const message = buildBookingMessage(waPayload)
-    const whatsappUrl = whatsappOwnerUrl(message)
 
-    // Abrí la pestaña en el mismo clic, antes del confirm (si no, el navegador la bloquea).
+    setConfirmId(null)
+    setCancellingId(booking.id)
     const popup = openBlankTab()
 
-    const confirmed = window.confirm(
-      `¿Querés cancelar ${booking.pitch?.name || 'la cancha'} del ${booking.date} a las ${booking.slot} hs?`,
-    )
-    if (!confirmed) {
-      try {
-        popup?.close()
-      } catch {
-        /* ignore */
+    try {
+      const result = await cancelBooking({ bookingId: booking.id })
+      if (!result.ok) {
+        try {
+          popup?.close()
+        } catch {
+          /* ignore */
+        }
+        setNotice({ type: 'error', text: 'No se pudo cancelar el turno.' })
+        return
       }
-      return
+
+      const whatsappUrl = openWhatsappToOwner(waPayload, popup)
+      setNotice({
+        type: 'success',
+        text: whatsappUrl
+          ? 'Turno cancelado. Se abrió WhatsApp para avisar al complejo.'
+          : 'Turno cancelado. WhatsApp no está configurado en el servidor (VITE_WHATSAPP_OWNER).',
+        whatsappUrl,
+      })
+    } finally {
+      setCancellingId(null)
     }
-
-    const result = await cancelBooking({ bookingId: booking.id })
-    if (!result.ok) {
-      try {
-        popup?.close()
-      } catch {
-        /* ignore */
-      }
-      setNotice({ type: 'error', text: 'No se pudo cancelar el turno.' })
-      return
-    }
-
-    openWhatsappMessageToOwner(message, popup)
-
-    setNotice({
-      type: 'success',
-      text: whatsappUrl
-        ? 'Turno cancelado. Se abrió WhatsApp para avisar al complejo.'
-        : 'Turno cancelado. WhatsApp no está configurado en el servidor (VITE_WHATSAPP_OWNER).',
-      whatsappUrl,
-    })
   }
 
   return (
@@ -186,16 +180,45 @@ export default function MyBookings() {
 
                   {canCancel ? (
                     <div className="mt-5 border-t border-neutral-100 pt-5">
-                      <button
-                        type="button"
-                        onClick={() => handleCancel(b)}
-                        className="rounded-xl border border-red-200 px-4 py-2.5 text-sm font-bold text-red-700 transition hover:bg-red-50"
-                      >
-                        Cancelar turno
-                      </button>
-                      <p className="mt-2 text-xs text-neutral-500">
-                        Si el pago ya fue registrado, quedará pendiente la gestión del reintegro.
-                      </p>
+                      {confirmId === b.id ? (
+                        <div className="rounded-xl border border-red-200 bg-red-50 p-4">
+                          <p className="text-sm font-semibold text-red-900">
+                            ¿Cancelar {b.pitch?.name || 'la cancha'} del {b.date} a las {b.slot} hs?
+                            Se abrirá WhatsApp para avisar al complejo.
+                          </p>
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleCancelConfirm(b)}
+                              disabled={cancellingId === b.id}
+                              className="rounded-xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              {cancellingId === b.id ? 'Cancelando…' : 'Sí, cancelar y avisar por WhatsApp'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setConfirmId(null)}
+                              disabled={cancellingId === b.id}
+                              className="rounded-xl border border-neutral-200 bg-white px-4 py-2.5 text-sm font-semibold text-neutral-800 transition hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              No, volver
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => setConfirmId(b.id)}
+                            className="rounded-xl border border-red-200 px-4 py-2.5 text-sm font-bold text-red-700 transition hover:bg-red-50"
+                          >
+                            Cancelar turno
+                          </button>
+                          <p className="mt-2 text-xs text-neutral-500">
+                            Si el pago ya fue registrado, quedará pendiente la gestión del reintegro.
+                          </p>
+                        </>
+                      )}
                     </div>
                   ) : null}
                 </article>
