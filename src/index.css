@@ -8,8 +8,6 @@
   }
   body {
     @apply m-0 min-h-screen bg-white text-neutral-900 antialiased;
-    background-image: theme(backgroundImage.dots-light);
-    background-size: theme(backgroundSize.dots);
   }
 }
 

@@ -145,7 +145,7 @@ export function Navbar() {
 
   return (
     <>
-    <header className="sticky top-0 z-[110] border-b border-neutral-200 bg-white shadow-nav motion-safe:animate-fade-in-soft">
+    <header className="sticky top-0 z-[110] border-b border-neutral-200 bg-white shadow-nav">
       <div className="h-1 w-full bg-gradient-to-r from-brand via-brand-dark to-brand" />
 
       <div className="mx-auto flex h-[4.75rem] max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">

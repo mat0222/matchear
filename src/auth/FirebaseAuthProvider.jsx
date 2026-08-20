@@ -21,6 +21,7 @@ import {
   subscribeAllBookings,
   subscribeAvailability,
   subscribeBookingsForUser,
+  fetchAvailability,
   subscribePaymentsForUser,
   subscribeUserProfile,
 } from '../lib/firestoreApi.js'
@@ -257,6 +258,14 @@ export function FirebaseAuthProvider({ children }) {
           },
           console.error,
         )
+      },
+
+      async refreshAvailability(pitchId, date) {
+        if (!pitchId || !date) return null
+        const cacheKey = `${pitchId}|${date}`
+        const data = await fetchAvailability(pitchId, date)
+        setAvailabilityCache((prev) => ({ ...prev, [cacheKey]: data }))
+        return data
       },
 
       async createBookingAndPayment({ pitchId, slot, date, paymentMethod, whatsapp }) {

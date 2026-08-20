@@ -1,33 +1,13 @@
 import { Link } from 'react-router-dom'
 import { PageShell } from '../components/PageShell'
-import { FadeIn } from '../components/FadeIn'
 
 const HERO_IMG =
-  'https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=1600&q=75'
+  'https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=960&q=65'
 
 function MapPinIcon(props) {
   return (
     <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden className={props.className}>
       <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z" />
-    </svg>
-  )
-}
-
-function PitchLines() {
-  return (
-    <svg
-      className="pointer-events-none absolute inset-0 h-full w-full opacity-[0.12]"
-      viewBox="0 0 800 450"
-      fill="none"
-      aria-hidden
-      preserveAspectRatio="xMidYMid slice"
-    >
-      <rect x="40" y="30" width="720" height="390" rx="8" stroke="white" strokeWidth="3" />
-      <line x1="400" y1="30" x2="400" y2="420" stroke="white" strokeWidth="2" />
-      <circle cx="400" cy="225" r="70" stroke="white" strokeWidth="2" />
-      <circle cx="400" cy="225" r="4" fill="white" />
-      <rect x="40" y="120" width="110" height="210" stroke="white" strokeWidth="2" />
-      <rect x="650" y="120" width="110" height="210" stroke="white" strokeWidth="2" />
     </svg>
   )
 }
@@ -65,26 +45,23 @@ const features = [
 export default function Home() {
   return (
     <PageShell>
-      <section className="relative isolate min-h-[calc(100vh-4.75rem-0.25rem)] overflow-hidden bg-neutral-950">
+      <section className="relative min-h-[calc(100vh-4.75rem-0.25rem)] overflow-hidden bg-neutral-950">
         <img
           src={HERO_IMG}
           alt="Partido de fútbol bajo reflectores"
           fetchPriority="high"
           decoding="async"
-          width={1600}
-          height={900}
-          className="absolute inset-0 h-full w-full object-cover object-[center_30%] motion-safe:animate-ken-burns"
+          width={960}
+          height={540}
+          className="absolute inset-0 h-full w-full object-cover object-[center_30%]"
         />
         <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/55 to-black/25" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/25" />
-        <PitchLines />
-        <div className="pointer-events-none absolute -left-16 top-24 h-72 w-72 rounded-full bg-brand/25 blur-3xl" />
-        <div className="pointer-events-none absolute bottom-10 right-0 h-80 w-80 rounded-full bg-brand/15 blur-3xl" />
 
         <div className="relative z-10 mx-auto flex min-h-[calc(100vh-4.75rem-0.25rem)] max-w-7xl flex-col justify-end px-4 pb-10 pt-20 sm:px-6 sm:pb-12 lg:justify-center lg:px-8 lg:pb-24 lg:pt-12">
-          <div className="max-w-2xl motion-safe:animate-fade-in">
-            <span className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-[0.7rem] font-bold uppercase tracking-[0.18em] text-white backdrop-blur-md">
-              <span className="h-2 w-2 animate-pulseDot rounded-full bg-brand shadow-[0_0_12px_#FF4B4B]" />
+          <div className="max-w-2xl">
+            <span className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-[0.7rem] font-bold uppercase tracking-[0.18em] text-white">
+              <span className="h-2 w-2 rounded-full bg-brand" />
               En juego · Reservá en minutos
             </span>
 
@@ -101,7 +78,7 @@ export default function Home() {
             <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
               <Link
                 to="/canchas"
-                className="inline-flex min-w-[200px] items-center justify-center gap-2 rounded-full bg-gradient-to-r from-brand to-brand-dark px-8 py-4 text-sm font-extrabold uppercase tracking-wide text-white shadow-xl shadow-brand/40 transition hover:brightness-110 hover:shadow-glow"
+                className="inline-flex min-w-[200px] items-center justify-center gap-2 rounded-full bg-gradient-to-r from-brand to-brand-dark px-8 py-4 text-sm font-extrabold uppercase tracking-wide text-white shadow-xl shadow-brand/40 transition hover:brightness-110"
               >
                 Ver canchas
                 <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -110,7 +87,7 @@ export default function Home() {
               </Link>
               <Link
                 to="/registro"
-                className="inline-flex min-w-[200px] items-center justify-center rounded-full border-2 border-white/50 bg-white/10 px-8 py-4 text-sm font-bold uppercase tracking-wide text-white backdrop-blur-sm transition hover:border-white hover:bg-white/20"
+                className="inline-flex min-w-[200px] items-center justify-center rounded-full border-2 border-white/50 bg-white/10 px-8 py-4 text-sm font-bold uppercase tracking-wide text-white transition hover:border-white hover:bg-white/20"
               >
                 Crear cuenta
               </Link>
@@ -122,15 +99,14 @@ export default function Home() {
               { label: 'Canchas', value: '5v5 a 9v9' },
               { label: 'Horario', value: '09 a 22 hs' },
               { label: 'Ubicación', value: 'Villa del Rosario' },
-            ].map((stat, i) => (
-              <FadeIn
+            ].map((stat) => (
+              <div
                 key={stat.label}
-                delay={280 + i * 70}
-                className="rounded-2xl border border-white/15 bg-black/35 px-5 py-4 backdrop-blur-md"
+                className="rounded-2xl border border-white/15 bg-black/35 px-5 py-4"
               >
                 <p className="text-[0.65rem] font-bold uppercase tracking-[0.18em] text-brand">{stat.label}</p>
                 <p className="mt-1 text-sm font-extrabold text-white sm:text-base">{stat.value}</p>
-              </FadeIn>
+              </div>
             ))}
           </div>
 
@@ -142,9 +118,8 @@ export default function Home() {
       </section>
 
       <section className="relative border-b border-neutral-100 bg-white px-4 py-20 sm:px-6">
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-brand-muted/50 to-transparent" />
         <div className="relative mx-auto max-w-6xl">
-          <FadeIn className="mx-auto max-w-2xl text-center">
+          <div className="mx-auto max-w-2xl text-center">
             <p className="text-sm font-bold uppercase tracking-[0.2em] text-brand">Ventajas</p>
             <h2 className="mt-3 text-3xl font-extrabold text-neutral-950 sm:text-4xl">
               ¿Por qué elegir Matchear?
@@ -152,16 +127,14 @@ export default function Home() {
             <p className="mt-4 text-neutral-600">
               Diseñamos la experiencia para que jugar sea simple: menos vueltas, más partidos.
             </p>
-          </FadeIn>
+          </div>
 
           <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {features.map((item, i) => (
-              <FadeIn
+            {features.map((item) => (
+              <article
                 key={item.title}
-                delay={i * 90}
-                className="group relative overflow-hidden rounded-3xl border border-neutral-100 bg-white p-8 shadow-card transition duration-300 hover:-translate-y-1 hover:border-brand/20 hover:shadow-card-hover"
+                className="group relative overflow-hidden rounded-3xl border border-neutral-100 bg-white p-8 shadow-card transition hover:border-brand/20"
               >
-                <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-brand-muted/80 transition group-hover:bg-brand/15" />
                 <div className="relative flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-muted text-brand ring-1 ring-brand/15">
                   <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     {item.icon}
@@ -169,8 +142,7 @@ export default function Home() {
                 </div>
                 <h3 className="relative mt-5 text-xl font-bold text-neutral-950">{item.title}</h3>
                 <p className="relative mt-2 text-sm leading-relaxed text-neutral-600">{item.text}</p>
-                <div className="relative mt-6 h-1 w-12 rounded-full bg-gradient-to-r from-brand to-brand-dark opacity-60" />
-              </FadeIn>
+              </article>
             ))}
           </div>
         </div>
@@ -204,10 +176,10 @@ export default function Home() {
             ].map((item, idx) => (
               <div
                 key={item.q}
-                className="overflow-hidden rounded-2xl border border-neutral-100 bg-white shadow-sm transition hover:border-brand/25 hover:shadow-md"
+                className="overflow-hidden rounded-2xl border border-neutral-100 bg-white shadow-sm"
               >
                 <div className="flex gap-4 p-6 sm:p-7">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand to-brand-dark text-sm font-extrabold text-white shadow-md shadow-brand/25">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand to-brand-dark text-sm font-extrabold text-white">
                     {idx + 1}
                   </span>
                   <div>
@@ -222,10 +194,6 @@ export default function Home() {
       </section>
 
       <section className="relative overflow-hidden bg-gradient-to-br from-brand via-brand to-brand-dark py-16 text-center sm:py-20">
-        <div className="pointer-events-none absolute inset-0 bg-red-shine opacity-90" />
-        <div className="pointer-events-none absolute -left-20 top-0 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-20 right-0 h-72 w-72 rounded-full bg-black/10 blur-3xl" />
-
         <div className="relative z-10 px-4">
           <p className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">¿Listo para jugar?</p>
           <p className="mx-auto mt-3 max-w-md text-sm font-medium text-white/85">

@@ -137,6 +137,28 @@ export function subscribeAvailability(pitchId, date, onData, onError) {
   }
 }
 
+export async function fetchAvailability(pitchId, date) {
+  const locksQ = query(
+    collection(db, 'slotLocks'),
+    where('pitchId', '==', pitchId),
+    where('date', '==', date),
+  )
+  const blocksQ = query(
+    collection(db, 'blocks'),
+    where('pitchId', '==', pitchId),
+    where('date', '==', date),
+  )
+
+  const [locksSnap, blocksSnap] = await Promise.all([getDocs(locksQ), getDocs(blocksQ)])
+  const locks = locksSnap.docs.map(mapDoc)
+  const blocks = blocksSnap.docs.map(mapDoc)
+  const bookings = locks
+    .filter((l) => !l.blocked)
+    .map((l) => ({ slot: l.slot, status: 'occupied' }))
+
+  return { bookings, blocks }
+}
+
 export function subscribeAllBookings(onData, onError) {
   const q = query(collection(db, 'bookings'), orderBy('createdAt', 'desc'), limit(150))
   return onSnapshot(

@@ -61,14 +61,12 @@ function ownerDigits(phone = OWNER_WHATSAPP) {
   return digits.length >= 10 ? digits : null
 }
 
-/** Abre la app de WhatsApp (sin la página intermedia de wa.me). */
 export function whatsappAppUrl(message, phone = OWNER_WHATSAPP) {
   const digits = ownerDigits(phone)
   if (!digits) return null
   return `whatsapp://send?phone=${digits}&text=${encodeURIComponent(message)}`
 }
 
-/** Respaldo por si no está instalada la app. */
 export function whatsappOwnerUrl(message, phone = OWNER_WHATSAPP) {
   const digits = ownerDigits(phone)
   if (!digits) return null
@@ -97,17 +95,16 @@ export function buildFixedSlotMessage({ name, phone, day, hour, format, period, 
   )
 }
 
-function triggerExternalNavigation(url) {
-  const anchor = document.createElement('a')
-  anchor.href = url
-  anchor.target = '_blank'
-  anchor.rel = 'noopener noreferrer'
-  document.body.appendChild(anchor)
-  anchor.click()
-  anchor.remove()
+/** Abre WhatsApp en celular sin pestaña en blanco ni salir de la página. */
+function openWhatsappOnMobile(appUrl) {
+  const iframe = document.createElement('iframe')
+  iframe.setAttribute('aria-hidden', 'true')
+  iframe.style.cssText = 'position:fixed;width:0;height:0;border:0;opacity:0;pointer-events:none'
+  iframe.src = appUrl
+  document.body.appendChild(iframe)
+  window.setTimeout(() => iframe.remove(), 2500)
 }
 
-/** Abre WhatsApp. En celular usa el protocolo nativo sin salir de la página. */
 export function openWhatsappMessageToOwner(message, popup) {
   const appUrl = whatsappAppUrl(message)
   const webUrl = whatsappOwnerUrl(message)
@@ -120,7 +117,7 @@ export function openWhatsappMessageToOwner(message, popup) {
   }
 
   if (isMobileDevice()) {
-    triggerExternalNavigation(appUrl)
+    openWhatsappOnMobile(appUrl)
     return webUrl
   }
 
@@ -145,7 +142,6 @@ export function openWhatsappFixedSlotRequest(payload, popup) {
   return openWhatsappMessageToOwner(buildFixedSlotMessage(payload), popup)
 }
 
-/** Abrí una pestaña vacía en el mismo clic del usuario (anti bloqueo de popups). */
 export function openBlankTab() {
   try {
     return window.open('about:blank', '_blank')

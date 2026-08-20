@@ -26,6 +26,7 @@ export default function PitchDetail() {
     createBookingAndPayment,
     listAvailability,
     watchAvailability,
+    refreshAvailability,
     payDeposit,
     settings,
   } = useAuth()
@@ -49,9 +50,25 @@ export default function PitchDetail() {
   )
 
   useEffect(() => {
-    if (!pitch?.id || !watchAvailability) return undefined
+    if (!pitch?.id) return undefined
+
+    if (isMobileDevice() && refreshAvailability) {
+      let cancelled = false
+      const load = () =>
+        refreshAvailability(pitch.id, day).then(() => {
+          if (!cancelled) setAvailTick((n) => n + 1)
+        })
+      load()
+      const interval = window.setInterval(load, 45000)
+      return () => {
+        cancelled = true
+        window.clearInterval(interval)
+      }
+    }
+
+    if (!watchAvailability) return undefined
     return watchAvailability(pitch.id, day, () => setAvailTick((n) => n + 1))
-  }, [pitch?.id, day, watchAvailability])
+  }, [pitch?.id, day, watchAvailability, refreshAvailability])
 
   const availability = pitch
     ? listAvailability({ pitchId: pitch.id, date: day, slots: SLOTS })

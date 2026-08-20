@@ -568,6 +568,10 @@ export function LocalAuthProvider({ children }) {
       watchAvailability() {
         return () => {}
       },
+
+      async refreshAvailability() {
+        return null
+      },
     }
   }, [store, user, ready])
 
