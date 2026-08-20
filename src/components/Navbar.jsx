@@ -141,8 +141,11 @@ export function Navbar() {
 
   const close = () => setOpen(false)
 
+  const mobileMenuTop = 'calc(0.25rem + 4.75rem)'
+
   return (
-    <header className="sticky top-0 z-[110] border-b border-neutral-200 bg-white shadow-nav motion-safe:animate-slide-down">
+    <>
+    <header className="sticky top-0 z-[110] border-b border-neutral-200 bg-white shadow-nav motion-safe:animate-fade-in-soft">
       <div className="h-1 w-full bg-gradient-to-r from-brand via-brand-dark to-brand" />
 
       <div className="mx-auto flex h-[4.75rem] max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
@@ -216,9 +219,13 @@ export function Navbar() {
           <MenuIcon open={open} />
         </button>
       </div>
+    </header>
 
       {open ? (
-        <div className="fixed inset-0 top-[calc(0.25rem+4.75rem)] z-[100] flex flex-col overflow-y-auto bg-white px-6 pb-10 pt-6 lg:hidden">
+        <div
+          className="fixed inset-x-0 bottom-0 z-[105] flex flex-col overflow-y-auto bg-white px-6 pb-10 pt-6 lg:hidden"
+          style={{ top: mobileMenuTop }}
+        >
           <div className="flex flex-col gap-1 rounded-2xl border border-neutral-200 bg-neutral-50 p-2">
             <NavLink
               to="/"
@@ -341,6 +348,6 @@ export function Navbar() {
           <p className="mt-auto pt-8 text-center text-xs text-neutral-400">Matchear · Villa del Rosario</p>
         </div>
       ) : null}
-    </header>
+    </>
   )
 }
